@@ -182,7 +182,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - APK URL injected via build-time env var; HEAD-check at startup caches availability; render "unavailable" message if HEAD fails
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
 
-  - [ ] 12.2 Register `GET /` landing page handler using `go:embed` in `cmd/server/main.go`
+  - [x] 12.2 Register `GET /` landing page handler using `go:embed` in `cmd/server/main.go`
     - Embed `web/static/*` into binary; serve with `http.FileServer`; set Cache-Control headers
     - _Requirements: 10.1, 10.5_
 
