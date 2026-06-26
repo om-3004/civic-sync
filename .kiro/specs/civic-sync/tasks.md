@@ -84,7 +84,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Call Gemini 2.5 Flash `GenerateContent`; set 10 s timeout
     - _Requirements: 3.1_
 
-  - [ ] 6.2 Implement `internal/triage/parser.go` — `parseGeminiResponse` function
+  - [x] 6.2 Implement `internal/triage/parser.go` — `parseGeminiResponse` function
     - Strip markdown fences, `json.Unmarshal` into `TriageResult`
     - Validate category against `allowedCategories` enum; trim title to 100 chars, description to 500 chars
     - Return error for unknown category, empty fields, or unparseable JSON
