@@ -61,8 +61,8 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 1.6, 1.8**
     - Generate random user token payloads; call login N times (N=1..10); assert exactly one Firestore document per UID
 
-- [ ] 5. Implement role upgrade (PIN) endpoint
-  - [ ] 5.1 Implement `POST /auth/upgrade` handler (`internal/auth/handler.go`)
+- [x] 5. Implement role upgrade (PIN) endpoint
+  - [x] 5.1 Implement `POST /auth/upgrade` handler (`internal/auth/handler.go`)
     - Validate non-empty PIN (400 on blank), compare to `MASTER_PIN` env var
     - Track `pin_failures` and `pin_lockout_until` in Firestore; return 429 after 5 consecutive failures for 15 minutes
     - Return 403 on wrong PIN, 409 if already official, 200 on success
