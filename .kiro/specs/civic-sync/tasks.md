@@ -167,12 +167,12 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 9.4**
     - Generate random Archived tickets; assert any upvote or status change returns 409 and ticket unchanged
 
-- [ ] 11. Implement middleware chain, role enforcement, and rate limiting
+- [x] 11. Implement middleware chain, role enforcement, and rate limiting
   - [x] 11.1 Implement `RequireRole` middleware and `RecoverPanic`, `RequestID`, `Logger`, `CORSHeaders` middleware (`internal/middleware/`)
     - Wire middleware chain: `RecoverPanic → RequestID → Logger → CORSHeaders → JWTVerify (skip GET /) → RoleCheck`
     - _Requirements: 1.4, 6.5, 8.1_
 
-  - [ ] 11.2 Enforce role-based access control on all routes per the permissions matrix in the design
+  - [x] 11.2 Enforce role-based access control on all routes per the permissions matrix in the design
     - `PUT /tickets/:id/status` requires `official`; `POST /auth/upgrade` returns 409 for already-official users
     - _Requirements: 6.8, 8.1_
 
