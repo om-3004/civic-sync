@@ -9,7 +9,7 @@
 /bin/
 /dist/
 civic-sync
-server
+/server
 
 # Go specific
 *.test

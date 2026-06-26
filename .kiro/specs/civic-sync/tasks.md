@@ -176,7 +176,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - `PUT /tickets/:id/status` requires `official`; `POST /auth/upgrade` returns 409 for already-official users
     - _Requirements: 6.8, 8.1_
 
-- [ ] 12. Implement static landing page and startup wiring
+- [x] 12. Implement static landing page and startup wiring
   - [x] 12.1 Create `web/static/` assets — `index.html` and `styles.css`
     - Include problem statement, CTA with APK download link, embedded `<video>` demo (≤60 s), tech stack grid naming all 6 Google technologies
     - APK URL injected via build-time env var; HEAD-check at startup caches availability; render "unavailable" message if HEAD fails
@@ -186,7 +186,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Embed `web/static/*` into binary; serve with `http.FileServer`; set Cache-Control headers
     - _Requirements: 10.1, 10.5_
 
-  - [ ] 12.3 Wire `cmd/server/main.go` — full startup sequence
+  - [x] 12.3 Wire `cmd/server/main.go` — full startup sequence
     - Load env config; init Firestore, Google PKI, Gemini in parallel via `sync.WaitGroup`
     - On any init failure: log and exit (Cloud Run marks unhealthy → 503 routed by platform)
     - Start archival goroutine; register all HTTP routes; call `http.ListenAndServe(":8080")`
