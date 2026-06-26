@@ -13,8 +13,8 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
   - Define `internal/store/store.go` — the `Store` interface with all nine methods matching the design
   - _Requirements: 1.6, 4.1, 5.1, 8.4, 9.1_
 
-- [ ] 2. Implement geospatial utilities
-  - [-] 2.1 Implement `internal/geo/haversine.go` — `HaversineMeters` function and bounding-box helpers
+- [x] 2. Implement geospatial utilities
+  - [x] 2.1 Implement `internal/geo/haversine.go` — `HaversineMeters` function and bounding-box helpers
     - Implement Haversine formula exactly as specified in the design
     - Implement `BoundingBoxDelta(lat, radiusMeters float64) (ΔlatDeg, ΔlngDeg float64)` helper
     - _Requirements: 4.1_
