@@ -135,7 +135,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 5.1, 5.2, 5.3, 5.4**
     - Generate random upvote counts + user lists; assert count += 1 on first vote; 409 + unchanged count on repeat
 
-- [ ] 10. Implement ticket status management and archival
+- [x] 10. Implement ticket status management and archival
   - [x] 10.1 Implement `PUT /tickets/:id/status` handler (`internal/tickets/handler.go`)
     - Enforce `RequireRole("official")` middleware; validate transition against state machine
     - Atomically write `status`, `updated_at`; write `resolved_at = now()` when transitioning to `Done`
@@ -152,7 +152,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 9.1**
     - Generate random tickets; apply Done transition; assert `resolved_at` is non-null and within 5 s of transition time; assert `resolved_at` unchanged for other transitions
 
-  - [ ] 10.4 Implement archival background goroutine (`internal/tickets/archival.go`)
+  - [x] 10.4 Implement archival background goroutine (`internal/tickets/archival.go`)
     - Launch goroutine at startup ticking every 15 minutes; call `store.ArchiveExpiredTickets`
     - Query tickets with `status == "Done"` and `resolved_at <= now - 7 days`; batch-update to `Archived` in batches of 500
     - _Requirements: 9.2_
