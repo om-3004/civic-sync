@@ -36,7 +36,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - _Requirements: 1.8, 5.3_
 
 - [ ] 4. Implement authentication middleware and login endpoint
-  - [ ] 4.1 Implement Google public-key cache (`internal/auth/keys.go`)
+  - [x] 4.1 Implement Google public-key cache (`internal/auth/keys.go`)
     - Fetch from `https://www.googleapis.com/oauth2/v3/certs` at startup
     - Background refresh goroutine every hour
     - _Requirements: 1.4, 11.3, 11.4_
