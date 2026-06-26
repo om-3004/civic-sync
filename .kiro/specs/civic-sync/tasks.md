@@ -124,8 +124,8 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
 - [x] 8. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Implement ticket upvoting
-  - [ ] 9.1 Implement `POST /tickets/:id/upvote` handler (`internal/tickets/handler.go`)
+- [x] 9. Implement ticket upvoting
+  - [x] 9.1 Implement `POST /tickets/:id/upvote` handler (`internal/tickets/handler.go`)
     - Check ticket exists (404), check archived status (409), check prior upvote (409)
     - Atomically increment `upvotes` and update `updated_at`; return new `upvotes` count
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
