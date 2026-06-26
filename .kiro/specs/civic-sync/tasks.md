@@ -79,7 +79,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Generate sequences of ≥ 5 wrong PINs; assert 5th and subsequent attempts return 429 within lockout window
 
 - [ ] 6. Implement AI triage pipeline
-  - [ ] 6.1 Implement `internal/triage/agent.go` — Gemini API client and prompt construction
+  - [x] 6.1 Implement `internal/triage/agent.go` — Gemini API client and prompt construction
     - Build multimodal prompt (system instruction + user turn with image URL + coordinates)
     - Call Gemini 2.5 Flash `GenerateContent`; set 10 s timeout
     - _Requirements: 3.1_
