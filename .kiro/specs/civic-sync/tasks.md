@@ -35,7 +35,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Test `IncrementUpvote` atomicity check (already-voted path)
     - _Requirements: 1.8, 5.3_
 
-- [ ] 4. Implement authentication middleware and login endpoint
+- [x] 4. Implement authentication middleware and login endpoint
   - [x] 4.1 Implement Google public-key cache (`internal/auth/keys.go`)
     - Fetch from `https://www.googleapis.com/oauth2/v3/certs` at startup
     - Background refresh goroutine every hour
@@ -51,7 +51,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 1.4, 1.5**
     - Generate tokens with each defect type (expired, wrong sig, wrong iss, wrong aud); assert accept iff all four conditions satisfied
 
-  - [ ] 4.4 Implement `POST /auth/login` handler (`internal/auth/handler.go`)
+  - [x] 4.4 Implement `POST /auth/login` handler (`internal/auth/handler.go`)
     - Verify token, upsert user document, return `uid/email/name/role`
     - Return 500 on Firestore write failure
     - _Requirements: 1.3, 1.6, 1.7, 1.8_
