@@ -243,3 +243,141 @@ func NewUpvoteTicketHandler(s store.Store) http.HandlerFunc {
 	}
 }
 
+
+// updateStatusRequest is the expected JSON body for PUT /tickets/:id/status.
+type updateStatusRequest struct {
+	Status string `json:"status"`
+}
+
+// statusResponse is the JSON body returned for a successful PUT /tickets/:id/status.
+type statusResponse struct {
+	ID        string    `json:"id"`
+	Status    string    `json:"status"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// validTransitions defines the only allowed status transitions for the
+// ticket state machine (Requirements 8.5, 8.6).
+var validTransitions = map[string]string{
+	"To Do":       "In Progress",
+	"In Progress": "Done",
+}
+
+// NewUpdateTicketStatusHandler returns an http.HandlerFunc that handles
+// PUT /tickets/:id/status.
+//
+// It enforces that the caller has role "official", validates the requested
+// transition against the state machine, and atomically updates the ticket
+// status (and resolved_at when transitioning to Done).
+//
+// Response codes:
+//   - 200: transition applied successfully
+//   - 400: invalid or missing status, or disallowed transition
+//   - 401: unauthenticated (no UID in context)
+//   - 403: caller is not "official"
+//   - 404: ticket not found
+//   - 409: ticket is Archived (no further transitions allowed)
+//
+// Requirements: 8.4, 8.5, 8.6, 9.1
+func NewUpdateTicketStatusHandler(s store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		// --- 1. Extract ticket ID from URL path ---
+		// Supports both Go 1.22+ pattern "/tickets/{id}/status" and
+		// manual path parsing for older ServeMux registrations.
+		ticketID := r.PathValue("id")
+		if ticketID == "" {
+			// Fallback: parse manually from "/tickets/<id>/status"
+			path := strings.TrimSuffix(r.URL.Path, "/status")
+			idx := strings.LastIndex(path, "/")
+			if idx >= 0 {
+				ticketID = path[idx+1:]
+			}
+		}
+		if ticketID == "" {
+			http.Error(w, `{"error":"missing ticket id"}`, http.StatusBadRequest)
+			return
+		}
+
+		// --- 2. Extract authenticated user UID ---
+		uid := auth.UIDFromContext(ctx)
+		if uid == "" {
+			http.Error(w, `{"error":"unauthenticated"}`, http.StatusUnauthorized)
+			return
+		}
+
+		// --- 3. Enforce role == "official" (Req 8.4) ---
+		user, err := s.GetUser(ctx, uid)
+		if err != nil {
+			http.Error(w, `{"error":"failed to retrieve user profile"}`, http.StatusInternalServerError)
+			return
+		}
+		if user == nil || user.Role != "official" {
+			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+			return
+		}
+
+		// --- 4. Decode and validate request body ---
+		var req updateStatusRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+			return
+		}
+		if req.Status == "" {
+			http.Error(w, `{"error":"status is required"}`, http.StatusBadRequest)
+			return
+		}
+
+		// --- 5. Fetch the ticket; 404 if not found ---
+		ticket, err := s.GetTicket(ctx, ticketID)
+		if err != nil {
+			http.Error(w, `{"error":"failed to retrieve ticket"}`, http.StatusInternalServerError)
+			return
+		}
+		if ticket == nil {
+			http.Error(w, `{"error":"ticket not found"}`, http.StatusNotFound)
+			return
+		}
+
+		// --- 6. Reject archived tickets with 409 (Req 9.4) ---
+		if ticket.Status == "Archived" {
+			http.Error(w, `{"error":"ticket is archived"}`, http.StatusConflict)
+			return
+		}
+
+		// --- 7. Validate state machine transition (Req 8.5, 8.6) ---
+		allowed, ok := validTransitions[ticket.Status]
+		if !ok || allowed != req.Status {
+			http.Error(w, `{"error":"invalid status transition"}`, http.StatusBadRequest)
+			return
+		}
+
+		// --- 8. Apply the status update atomically (Req 9.1) ---
+		// UpdateTicketStatus writes status, updated_at, and resolved_at (for Done).
+		if err := s.UpdateTicketStatus(ctx, ticketID, req.Status); err != nil {
+			if errors.Is(err, store.ErrTicketArchived) {
+				http.Error(w, `{"error":"ticket is archived"}`, http.StatusConflict)
+				return
+			}
+			http.Error(w, `{"error":"failed to update ticket status"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// --- 9. Fetch updated ticket to read accurate updated_at ---
+		updated, err := s.GetTicket(ctx, ticketID)
+		if err != nil || updated == nil {
+			http.Error(w, `{"error":"failed to retrieve updated ticket"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// --- 10. Return 200 with id, status, updated_at ---
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(statusResponse{
+			ID:        updated.ID,
+			Status:    updated.Status,
+			UpdatedAt: updated.UpdatedAt,
+		})
+	}
+}

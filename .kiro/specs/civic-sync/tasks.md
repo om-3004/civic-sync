@@ -136,7 +136,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Generate random upvote counts + user lists; assert count += 1 on first vote; 409 + unchanged count on repeat
 
 - [ ] 10. Implement ticket status management and archival
-  - [ ] 10.1 Implement `PUT /tickets/:id/status` handler (`internal/tickets/handler.go`)
+  - [x] 10.1 Implement `PUT /tickets/:id/status` handler (`internal/tickets/handler.go`)
     - Enforce `RequireRole("official")` middleware; validate transition against state machine
     - Atomically write `status`, `updated_at`; write `resolved_at = now()` when transitioning to `Done`
     - Return 400 on invalid transition, 409 on Archived ticket, 403 on non-official
