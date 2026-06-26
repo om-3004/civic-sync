@@ -24,8 +24,8 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 4.1**
     - Use `rapid.Float64Range` to generate random coordinate pairs; assert `H(a,b) == H(b,a)` within 1 mm tolerance
 
-- [ ] 3. Implement Firestore store layer
-  - [ ] 3.1 Implement `internal/store/firestore.go` — concrete `FirestoreStore` satisfying the `Store` interface
+- [x] 3. Implement Firestore store layer
+  - [x] 3.1 Implement `internal/store/firestore.go` — concrete `FirestoreStore` satisfying the `Store` interface
     - Implement all nine methods: `GetUser`, `UpsertUser`, `CreateTicket`, `GetTicket`, `QueryActiveTicketsByCategory`, `IncrementUpvote`, `UpdateTicketStatus`, `ArchiveExpiredTickets`, `HasUserUpvoted`
     - Wire Firestore composite indexes (document-level comments)
     - _Requirements: 1.6, 1.8, 4.1, 5.1, 8.4, 9.2_
