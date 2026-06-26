@@ -157,7 +157,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Query tickets with `status == "Done"` and `resolved_at <= now - 7 days`; batch-update to `Archived` in batches of 500
     - _Requirements: 9.2_
 
-  - [ ]* 10.5 Write property test for archival correctness (Property 15)
+  - [x] 10.5 Write property test for archival correctness (Property 15)
     - **Property 15: Archival Transitions All Eligible Tickets**
     - **Validates: Requirements 9.2**
     - Generate random ticket collections with various `resolved_at` ages; after archival run assert all eligible archived; no others modified
