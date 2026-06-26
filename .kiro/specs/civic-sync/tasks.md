@@ -101,7 +101,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - _Requirements: 3.1, 3.2, 3.5_
 
 - [ ] 7. Implement duplicate detection and ticket creation
-  - [ ] 7.1 Implement bounding-box + Haversine duplicate detection (`internal/tickets/duplicate.go`)
+  - [x] 7.1 Implement bounding-box + Haversine duplicate detection (`internal/tickets/duplicate.go`)
     - Execute bounding-box pre-filter query against Firestore via `QueryActiveTicketsByCategory`
     - Run Haversine exact-distance check in-process; return closest match or nil
     - _Requirements: 4.1, 4.2, 4.5_
