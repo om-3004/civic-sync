@@ -1,0 +1,45 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build output
+/bin/
+/dist/
+civic-sync
+server
+
+# Go specific
+*.test
+*.out
+/vendor/
+
+# Environment & secrets
+.env
+.env.*
+*.pem
+*.key
+*.json.secret
+service-account*.json
+firebase-*.json
+credentials*.json
+
+# IDE & editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test coverage
+coverage.out
+coverage.html
