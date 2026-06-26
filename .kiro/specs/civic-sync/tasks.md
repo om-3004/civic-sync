@@ -162,7 +162,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 9.2**
     - Generate random ticket collections with various `resolved_at` ages; after archival run assert all eligible archived; no others modified
 
-  - [ ]* 10.6 Write property test for archived mutation rejection (Property 16)
+  - [x] 10.6 Write property test for archived mutation rejection (Property 16)
     - **Property 16: Archived Tickets Reject All Mutation Attempts**
     - **Validates: Requirements 9.4**
     - Generate random Archived tickets; assert any upvote or status change returns 409 and ticket unchanged
