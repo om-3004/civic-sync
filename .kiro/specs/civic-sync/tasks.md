@@ -142,7 +142,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Return 400 on invalid transition, 409 on Archived ticket, 403 on non-official
     - _Requirements: 8.4, 8.5, 8.6, 9.1_
 
-  - [ ]* 10.2 Write property test for status machine transitions (Property 13)
+  - [x] 10.2 Write property test for status machine transitions (Property 13)
     - **Property 13: Ticket Status Transitions Follow the Permitted State Machine**
     - **Validates: Requirements 8.5, 8.6, 9.4**
     - Generate all `(currentStatus, targetStatus)` pairs; assert exactly `(To Do→In Progress)` and `(In Progress→Done)` succeed; all others fail with 400; Archived tickets return 409
