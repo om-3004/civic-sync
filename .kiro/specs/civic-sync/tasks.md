@@ -41,7 +41,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Background refresh goroutine every hour
     - _Requirements: 1.4, 11.3, 11.4_
 
-  - [ ] 4.2 Implement `JWTVerify` middleware (`internal/middleware/jwt.go`)
+  - [x] 4.2 Implement `JWTVerify` middleware (`internal/middleware/jwt.go`)
     - Strip Bearer prefix, parse header `kid`, verify RS256 signature, `exp`, `iss`, `aud`
     - Store `uid`/`email`/`name` in request context; return 401 on any failure
     - _Requirements: 1.4, 1.5_
