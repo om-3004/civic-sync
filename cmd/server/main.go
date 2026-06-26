@@ -19,6 +19,7 @@ import (
 	"sync/atomic"
 
 	"cloud.google.com/go/firestore"
+	"github.com/joho/godotenv"
 
 	"github.com/civic-sync/civic-sync/internal/auth"
 	"github.com/civic-sync/civic-sync/internal/middleware"
@@ -28,6 +29,12 @@ import (
 )
 
 func main() {
+	// Load .env if present (local dev only — no-op in Cloud Run where env vars
+	// are injected directly by the platform).
+	if err := godotenv.Load(); err == nil {
+		log.Println("startup: loaded .env file")
+	}
+
 	ctx := context.Background()
 	mux := http.NewServeMux()
 
