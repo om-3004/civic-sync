@@ -100,7 +100,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Return 422 on Gemini parse failure, 504 on timeout
     - _Requirements: 3.1, 3.2, 3.5_
 
-- [ ] 7. Implement duplicate detection and ticket creation
+- [x] 7. Implement duplicate detection and ticket creation
   - [x] 7.1 Implement bounding-box + Haversine duplicate detection (`internal/tickets/duplicate.go`)
     - Execute bounding-box pre-filter query against Firestore via `QueryActiveTicketsByCategory`
     - Run Haversine exact-distance check in-process; return closest match or nil
@@ -116,7 +116,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 4.2**
     - Generate origin + N tickets within 50 m with matching category; assert returned ticket has minimum Haversine distance
 
-  - [ ] 7.4 Implement `POST /tickets` handler (`internal/tickets/handler.go`)
+  - [x] 7.4 Implement `POST /tickets` handler (`internal/tickets/handler.go`)
     - Validate coordinates (400 on invalid/absent), run duplicate detection, create new ticket or return existing duplicate
     - Return 201 for new ticket (`"duplicate": false`), 200 for duplicate (`"duplicate": true`)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.6_
