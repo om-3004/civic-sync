@@ -6,7 +6,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
 
 ## Tasks
 
-- [ ] 1. Set up Go backend project structure and core types
+- [x] 1. Set up Go backend project structure and core types
   - Create `cmd/server/` entry point and module layout (`internal/auth`, `internal/tickets`, `internal/triage`, `internal/geo`, `internal/middleware`, `internal/models`, `internal/store`, `web/static/`)
   - Define `internal/models/user.go` (`User` struct with all Firestore field tags)
   - Define `internal/models/ticket.go` (`Ticket`, `Location` structs with all Firestore and JSON tags)
@@ -14,7 +14,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
   - _Requirements: 1.6, 4.1, 5.1, 8.4, 9.1_
 
 - [ ] 2. Implement geospatial utilities
-  - [ ] 2.1 Implement `internal/geo/haversine.go` — `HaversineMeters` function and bounding-box helpers
+  - [-] 2.1 Implement `internal/geo/haversine.go` — `HaversineMeters` function and bounding-box helpers
     - Implement Haversine formula exactly as specified in the design
     - Implement `BoundingBoxDelta(lat, radiusMeters float64) (ΔlatDeg, ΔlngDeg float64)` helper
     - _Requirements: 4.1_
