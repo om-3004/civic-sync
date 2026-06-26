@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -14,35 +13,6 @@ import (
 
 	"github.com/civic-sync/civic-sync/internal/auth"
 )
-
-// contextKey is an unexported type for context keys in this package,
-// preventing collisions with keys defined in other packages.
-type contextKey int
-
-const (
-	contextKeyUID contextKey = iota
-	contextKeyEmail
-	contextKeyName
-)
-
-// UIDFromContext retrieves the authenticated user's UID (sub claim) from ctx.
-// Returns an empty string if not present.
-func UIDFromContext(ctx context.Context) string {
-	v, _ := ctx.Value(contextKeyUID).(string)
-	return v
-}
-
-// EmailFromContext retrieves the authenticated user's email from ctx.
-func EmailFromContext(ctx context.Context) string {
-	v, _ := ctx.Value(contextKeyEmail).(string)
-	return v
-}
-
-// NameFromContext retrieves the authenticated user's name from ctx.
-func NameFromContext(ctx context.Context) string {
-	v, _ := ctx.Value(contextKeyName).(string)
-	return v
-}
 
 // jwtHeader holds the fields we need from a JWT's JOSE header.
 type jwtHeader struct {
@@ -168,9 +138,7 @@ func JWTVerify(keyCache *auth.KeyCache) func(http.Handler) http.Handler {
 
 			// --- 5. Store claims in request context and continue ---
 			ctx := r.Context()
-			ctx = context.WithValue(ctx, contextKeyUID, claims.Sub)
-			ctx = context.WithValue(ctx, contextKeyEmail, claims.Email)
-			ctx = context.WithValue(ctx, contextKeyName, claims.Name)
+			ctx = auth.WithClaims(ctx, claims.Sub, claims.Email, claims.Name)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
