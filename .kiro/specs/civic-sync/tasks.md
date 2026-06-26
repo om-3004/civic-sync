@@ -19,7 +19,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Implement `BoundingBoxDelta(lat, radiusMeters float64) (ΔlatDeg, ΔlngDeg float64)` helper
     - _Requirements: 4.1_
 
-  - [ ]* 2.2 Write property test for Haversine symmetry and 50 m threshold (Property 6)
+  - [x] 2.2 Write property test for Haversine symmetry and 50 m threshold (Property 6)
     - **Property 6: Haversine Distance is Symmetric and Satisfies the 50-Meter Threshold Correctly**
     - **Validates: Requirements 4.1**
     - Use `rapid.Float64Range` to generate random coordinate pairs; assert `H(a,b) == H(b,a)` within 1 mm tolerance
@@ -30,7 +30,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Wire Firestore composite indexes (document-level comments)
     - _Requirements: 1.6, 1.8, 4.1, 5.1, 8.4, 9.2_
 
-  - [ ]* 3.2 Write unit tests for store layer with a mock store
+  - [x] 3.2 Write unit tests for store layer with a mock store
     - Test `UpsertUser` idempotency using an in-memory fake
     - Test `IncrementUpvote` atomicity check (already-voted path)
     - _Requirements: 1.8, 5.3_
@@ -46,7 +46,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Store `uid`/`email`/`name` in request context; return 401 on any failure
     - _Requirements: 1.4, 1.5_
 
-  - [ ]* 4.3 Write property test for JWT verification (Property 1)
+  - [x] 4.3 Write property test for JWT verification (Property 1)
     - **Property 1: JWT Verification Accepts Valid Tokens and Rejects Invalid Ones**
     - **Validates: Requirements 1.4, 1.5**
     - Generate tokens with each defect type (expired, wrong sig, wrong iss, wrong aud); assert accept iff all four conditions satisfied
@@ -56,7 +56,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Return 500 on Firestore write failure
     - _Requirements: 1.3, 1.6, 1.7, 1.8_
 
-  - [ ]* 4.5 Write property test for user profile idempotency (Property 2)
+  - [x] 4.5 Write property test for user profile idempotency (Property 2)
     - **Property 2: User Profile Creation is Idempotent**
     - **Validates: Requirements 1.6, 1.8**
     - Generate random user token payloads; call login N times (N=1..10); assert exactly one Firestore document per UID
@@ -68,12 +68,12 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Return 403 on wrong PIN, 409 if already official, 200 on success
     - _Requirements: 6.3, 6.4, 6.5, 6.6_
 
-  - [ ]* 5.2 Write property test for PIN exact-match validation (Property 8)
+  - [x] 5.2 Write property test for PIN exact-match validation (Property 8)
     - **Property 8: PIN Validation Accepts Only the Exact Master PIN**
     - **Validates: Requirements 6.3, 6.4**
     - Generate random non-empty strings; assert success iff string equals master PIN exactly
 
-  - [ ]* 5.3 Write property test for PIN rate limiting (Property 9)
+  - [x] 5.3 Write property test for PIN rate limiting (Property 9)
     - **Property 9: PIN Rate Limiting Blocks After 5 Consecutive Failures**
     - **Validates: Requirements 6.6**
     - Generate sequences of ≥ 5 wrong PINs; assert 5th and subsequent attempts return 429 within lockout window
@@ -90,7 +90,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Return error for unknown category, empty fields, or unparseable JSON
     - _Requirements: 3.2, 3.5, 3.7_
 
-  - [ ]* 6.3 Write property test for triage response parsing (Property 3)
+  - [x] 6.3 Write property test for triage response parsing (Property 3)
     - **Property 3: AI Triage Response Parsing Always Produces a Valid Category**
     - **Validates: Requirements 3.2, 3.7**
     - Generate random Gemini response strings (valid JSON, malformed JSON, valid JSON with random category); assert parsed category ∈ allowed set OR error returned
@@ -106,12 +106,12 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Run Haversine exact-distance check in-process; return closest match or nil
     - _Requirements: 4.1, 4.2, 4.5_
 
-  - [ ]* 7.2 Write property test for duplicate detection correctness (Property 4)
+  - [x] 7.2 Write property test for duplicate detection correctness (Property 4)
     - **Property 4: Duplicate Detection Correctly Partitions Submissions by Distance and Category**
     - **Validates: Requirements 4.1, 4.4, 4.5**
     - Generate random (lat, lng) origin + ticket sets with random coordinates, statuses, categories; assert duplicate found iff active ticket within 50 m with matching category
 
-  - [ ]* 7.3 Write property test for closest-duplicate selection (Property 5)
+  - [x] 7.3 Write property test for closest-duplicate selection (Property 5)
     - **Property 5: Duplicate Detection Returns the Closest Match**
     - **Validates: Requirements 4.2**
     - Generate origin + N tickets within 50 m with matching category; assert returned ticket has minimum Haversine distance
@@ -121,7 +121,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Return 201 for new ticket (`"duplicate": false`), 200 for duplicate (`"duplicate": true`)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.6_
 
-- [ ] 8. Checkpoint — Ensure all tests pass
+- [x] 8. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. Implement ticket upvoting
