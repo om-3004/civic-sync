@@ -147,7 +147,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 8.5, 8.6, 9.4**
     - Generate all `(currentStatus, targetStatus)` pairs; assert exactly `(To Do→In Progress)` and `(In Progress→Done)` succeed; all others fail with 400; Archived tickets return 409
 
-  - [ ]* 10.3 Write property test for resolved_at on Done transition (Property 14)
+  - [x] 10.3 Write property test for resolved_at on Done transition (Property 14)
     - **Property 14: resolved_at is Set Exactly When Status Transitions to Done**
     - **Validates: Requirements 9.1**
     - Generate random tickets; apply Done transition; assert `resolved_at` is non-null and within 5 s of transition time; assert `resolved_at` unchanged for other transitions
