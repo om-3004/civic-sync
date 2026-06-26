@@ -177,7 +177,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - _Requirements: 6.8, 8.1_
 
 - [ ] 12. Implement static landing page and startup wiring
-  - [ ] 12.1 Create `web/static/` assets — `index.html` and `styles.css`
+  - [x] 12.1 Create `web/static/` assets — `index.html` and `styles.css`
     - Include problem statement, CTA with APK download link, embedded `<video>` demo (≤60 s), tech stack grid naming all 6 Google technologies
     - APK URL injected via build-time env var; HEAD-check at startup caches availability; render "unavailable" message if HEAD fails
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
