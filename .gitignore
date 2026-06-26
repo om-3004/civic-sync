@@ -19,6 +19,7 @@ civic-sync
 # Environment & secrets
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 *.json.secret
