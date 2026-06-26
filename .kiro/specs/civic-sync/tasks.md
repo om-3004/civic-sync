@@ -130,7 +130,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Atomically increment `upvotes` and update `updated_at`; return new `upvotes` count
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
 
-  - [ ]* 9.2 Write property test for upvote idempotency (Property 7)
+  - [x] 9.2 Write property test for upvote idempotency (Property 7)
     - **Property 7: Upvote Increments Count Exactly Once Per Unique User**
     - **Validates: Requirements 5.1, 5.2, 5.3, 5.4**
     - Generate random upvote counts + user lists; assert count += 1 on first vote; 409 + unchanged count on repeat
