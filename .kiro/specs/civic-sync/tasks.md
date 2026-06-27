@@ -286,7 +286,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Build image, push to Artifact Registry, deploy to Cloud Run with scale-to-zero (`--min-instances=0`) and required env vars (`PROJECT_ID`, `GEMINI_API_KEY`, `MASTER_PIN`)
     - _Requirements: 11.1, 11.2_
 
-- [ ] 21. Final checkpoint — Ensure all tests pass
+- [x] 21. Final checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
