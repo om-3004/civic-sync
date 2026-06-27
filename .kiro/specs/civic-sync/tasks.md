@@ -212,7 +212,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - _Requirements: 1.1, 1.2, 1.3_
 
 - [ ] 15. Implement citizen issue reporting flow
-  - [ ] 15.1 Implement camera-only capture with GPS (`lib/screens/report_flow.dart`)
+  - [x] 15.1 Implement camera-only capture with GPS (`lib/screens/report_flow.dart`)
     - Open native camera (gallery disabled at widget level); request camera permission (show error if denied)
     - Poll `geolocator` for coordinates with 50 m accuracy for up to 15 s; show error if unable to acquire
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_

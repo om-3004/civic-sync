@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'screens/auth_screen.dart';
+import 'screens/report_flow.dart';
 
 Future<void> main() async {
   // Must be called before any plugin or async code.
@@ -56,6 +57,7 @@ class CivicSyncApp extends StatelessWidget {
       initialRoute: '/auth',
       routes: {
         '/auth': (_) => const AuthScreen(),
+        '/report': (_) => const ReportFlowScreen(),
         // Placeholder screens — full implementations in tasks 16 and 17.
         '/citizen-feed': (_) => const _PlaceholderScreen(title: 'Citizen Feed'),
         '/official-dash': (_) =>
