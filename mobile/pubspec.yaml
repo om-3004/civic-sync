@@ -1,0 +1,42 @@
+name: civic_sync
+description: "CivicSync — hyperlocal civic issue reporting app."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: 1.0.9
+
+  # ── Firebase / Google ─────────────────────────────────────────────────────
+  # firebase_core must be initialized before any other Firebase service.
+  firebase_core: 4.11.0
+  firebase_auth: 6.5.4        # Auth state management with Firebase Auth
+  cloud_firestore: 6.6.0      # Snapshot listeners for real-time feed (Req 7.1)
+  firebase_storage: 13.4.3    # Image upload for ticket evidence (Req 2.6)
+  google_sign_in: 7.2.0       # Google OAuth sign-in flow (Req 1.1)
+
+  # ── Camera & Location ────────────────────────────────────────────────────
+  # camera-only; gallery access is disabled at the widget level (Req 2.1, 2.3)
+  image_picker: 1.2.2
+  geolocator: 14.0.3          # GPS coordinate acquisition ≤50 m accuracy (Req 2.4)
+
+  # ── Map ──────────────────────────────────────────────────────────────────
+  google_maps_flutter: 2.17.1 # Map view with ticket location markers (Req 7.1)
+
+  # ── Networking ───────────────────────────────────────────────────────────
+  http: 1.6.0                 # Backend API calls (POST /auth/login, /triage, etc.)
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: 6.0.0
+
+flutter:
+  uses-material-design: true

@@ -27,6 +27,23 @@ service-account*.json
 firebase-*.json
 credentials*.json
 
+# Flutter / Firebase — real credentials, never commit
+mobile/android/app/google-services.json
+mobile/ios/Runner/GoogleService-Info.plist
+# Signing keystores
+mobile/android/key.properties
+mobile/**/*.keystore
+mobile/**/*.jks
+
+# Flutter build output and local config
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.pub-cache/
+mobile/android/local.properties
+mobile/android/.gradle/
+
 # IDE & editor
 .vscode/
 .idea/

@@ -1,0 +1,66 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ── Permissions ──────────────────────────────────────────────────────── -->
+
+    <!-- Network access: backend API calls, Firebase, Google Sign-In, Maps tile fetch -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- GPS location for ticket submission coordinates (Req 2.4) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Camera capture for issue evidence; gallery access is disabled at Flutter
+         widget level — only live camera capture is permitted (Req 2.1, 2.3) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Declare camera as a required hardware feature so the Play Store filters
+         devices without a camera. -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" />
+
+    <application
+        android:label="CivicSync"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Google Maps API key — TODO: replace with your actual Maps API key
+             obtained from https://console.cloud.google.com/
+             Required by google_maps_flutter (Req 7.1) -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="TODO_REPLACE_WITH_GOOGLE_MAPS_API_KEY" />
+
+        <!-- Flutter embedding version marker; do not delete. -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+
+    <!-- Required for Flutter text-processing plugin. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+    </queries>
+
+</manifest>
