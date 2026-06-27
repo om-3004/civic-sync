@@ -19,6 +19,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'screens/auth_screen.dart';
 import 'screens/citizen_feed_screen.dart';
 import 'screens/confirm_screen.dart';
+import 'screens/official_dashboard_screen.dart';
 import 'screens/report_flow.dart';
 
 Future<void> main() async {
@@ -63,9 +64,8 @@ class CivicSyncApp extends StatelessWidget {
         '/triage-confirm': (_) => const ConfirmScreen(),
         // CitizenFeedScreen — implemented in task 16.
         '/citizen-feed': (_) => const CitizenFeedScreen(),
-        // OfficialDashboardScreen — placeholder until task 17.
-        '/official-dash': (_) =>
-            const _PlaceholderScreen(title: 'Official Dashboard'),
+        // OfficialDashboardScreen — Kanban management view (task 17).
+        '/official-dash': (_) => const OfficialDashboardScreen(),
       },
     );
   }

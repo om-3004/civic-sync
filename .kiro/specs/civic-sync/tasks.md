@@ -250,14 +250,14 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Include upvote button that calls `POST /tickets/:id/upvote`; display 409 conflict message on duplicate upvote
     - _Requirements: 7.3, 5.1, 5.3_
 
-- [ ] 17. Implement official management dashboard
-  - [ ] 17.1 Implement `OfficialDashboardScreen` Kanban view (`lib/screens/official_dashboard_screen.dart`)
+- [x] 17. Implement official management dashboard
+  - [x] 17.1 Implement `OfficialDashboardScreen` Kanban view (`lib/screens/official_dashboard_screen.dart`)
     - Subscribe to Firestore snapshot listener with `status IN [To Do, In Progress, Done]` ordered by `upvotes` desc, limit 200
     - Display full ticket details including reporter email; show status change controls
     - Call `PUT /tickets/:id/status` on status change; handle 400/409 errors
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.7_
 
-  - [ ]* 17.2 Write property test for official dashboard query (Property 12)
+  - [x] 17.2 Write property test for official dashboard query (Property 12)
     - **Property 12: Official Dashboard Query Returns at Most 200 Tickets Sorted by Upvotes Descending**
     - **Validates: Requirements 8.2**
     - Generate random ticket collections; assert at most 200 returned and sorted by `upvotes` descending
