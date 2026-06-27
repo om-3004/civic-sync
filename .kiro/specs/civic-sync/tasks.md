@@ -228,24 +228,24 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - On confirmation `POST /tickets`; handle duplicate response by prompting upvote
     - _Requirements: 3.3, 3.4, 3.6, 4.3_
 
-- [ ] 16. Implement citizen issue feed
-  - [ ] 16.1 Implement `CitizenFeedScreen` with map and list views (`lib/screens/citizen_feed_screen.dart`)
+- [x] 16. Implement citizen issue feed
+  - [x] 16.1 Implement `CitizenFeedScreen` with map and list views (`lib/screens/citizen_feed_screen.dart`)
     - Subscribe to Firestore snapshot listener filtering `status IN [To Do, In Progress, Done]` ordered by `created_at` desc
     - Client-side filter: exclude Done tickets where `resolved_at < now - 7 days`; display "Resolved" badge on remaining Done tickets
     - Show error message and retry button on listener failure
     - _Requirements: 7.1, 7.2, 7.4, 7.5, 7.6, 9.3, 9.5_
 
-  - [ ]* 16.2 Write property test for citizen feed query predicate (Property 10)
+  - [x] 16.2 Write property test for citizen feed query predicate (Property 10)
     - **Property 10: Citizen Feed Query Returns Exactly the Correct Ticket Set**
     - **Validates: Requirements 7.1, 7.5, 9.5**
     - Generate random ticket collections with various statuses and `resolved_at` offsets; assert returned set exactly matches `status ∈ {To Do, In Progress}` OR `(Done AND resolved_at > now − 7 days)`
 
-  - [ ]* 16.3 Write property test for citizen feed sort order (Property 11)
+  - [x] 16.3 Write property test for citizen feed sort order (Property 11)
     - **Property 11: Citizen Feed List is Always Sorted by created_at Descending**
     - **Validates: Requirements 7.2**
     - Generate random ticket collections satisfying feed criteria; assert list ordered by `created_at` descending
 
-  - [ ] 16.4 Implement ticket detail view (`lib/screens/ticket_detail_screen.dart`)
+  - [x] 16.4 Implement ticket detail view (`lib/screens/ticket_detail_screen.dart`)
     - Display all fields: `category`, `title`, `description`, `image_url`, `location`, `status`, `upvotes`, `created_at`, `updated_at`
     - Include upvote button that calls `POST /tickets/:id/upvote`; display 409 conflict message on duplicate upvote
     - _Requirements: 7.3, 5.1, 5.3_
