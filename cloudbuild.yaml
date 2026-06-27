@@ -1,0 +1,68 @@
+# Cloud Build pipeline for CivicSync
+# Builds the Docker image, pushes to Artifact Registry, and deploys to Cloud Run.
+#
+# Required substitutions (can be overridden at submit time):
+#   _REGION       — GCP region for Artifact Registry + Cloud Run (default: us-central1)
+#   _SERVICE_NAME — Cloud Run service name (default: civic-sync)
+#
+# Required Secret Manager secrets (must exist in the project before deploying):
+#   gemini-api-key  — Gemini API key (latest version)
+#   master-pin      — Master admin PIN (latest version)
+#
+# Trigger with:
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions _REGION=us-central1
+
+substitutions:
+  _REGION: us-central1
+  _SERVICE_NAME: civic-sync
+
+steps:
+  # ── Step 1: Build the Docker image ─────────────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args:
+      - build
+      - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/civic-sync/server:$SHORT_SHA
+      - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/civic-sync/server:latest
+      - --file=Dockerfile
+      - .
+
+  # ── Step 2: Push to Artifact Registry ──────────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id: push
+    waitFor:
+      - build
+    args:
+      - push
+      - --all-tags
+      - $_REGION-docker.pkg.dev/$PROJECT_ID/civic-sync/server
+
+  # ── Step 3: Deploy to Cloud Run ────────────────────────────────────────────
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy
+    waitFor:
+      - push
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - $_SERVICE_NAME
+      - --image=$_REGION-docker.pkg.dev/$PROJECT_ID/civic-sync/server:$SHORT_SHA
+      - --region=$_REGION
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --min-instances=0
+      - --max-instances=10
+      # PROJECT_ID is safe to pass as a plain env var (not a secret)
+      - --set-env-vars=PROJECT_ID=$PROJECT_ID
+      # GEMINI_API_KEY and MASTER_PIN are read from Secret Manager at runtime
+      - --set-secrets=GEMINI_API_KEY=gemini-api-key:latest,MASTER_PIN=master-pin:latest
+
+images:
+  - $_REGION-docker.pkg.dev/$PROJECT_ID/civic-sync/server:$SHORT_SHA
+  - $_REGION-docker.pkg.dev/$PROJECT_ID/civic-sync/server:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY

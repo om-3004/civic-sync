@@ -277,12 +277,12 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
 - [x] 19. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 20. Write Dockerfile and Cloud Run deployment configuration
-  - [ ] 20.1 Write `Dockerfile` using `scratch` base image
+- [x] 20. Write Dockerfile and Cloud Run deployment configuration
+  - [x] 20.1 Write `Dockerfile` using `scratch` base image
     - Build with `CGO_ENABLED=0 GOARCH=amd64 GOOS=linux`; copy single static binary and `web/static/` into `scratch` image
     - _Requirements: 11.1_
 
-  - [ ] 20.2 Write `cloudbuild.yaml` / deployment script
+  - [x] 20.2 Write `cloudbuild.yaml` / deployment script
     - Build image, push to Artifact Registry, deploy to Cloud Run with scale-to-zero (`--min-instances=0`) and required env vars (`PROJECT_ID`, `GEMINI_API_KEY`, `MASTER_PIN`)
     - _Requirements: 11.1, 11.2_
 
