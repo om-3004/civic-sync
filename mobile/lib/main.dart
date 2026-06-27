@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'screens/auth_screen.dart';
+import 'screens/citizen_feed_screen.dart';
 import 'screens/confirm_screen.dart';
 import 'screens/report_flow.dart';
 
@@ -60,8 +61,9 @@ class CivicSyncApp extends StatelessWidget {
         '/auth': (_) => const AuthScreen(),
         '/report': (_) => const ReportFlowScreen(),
         '/triage-confirm': (_) => const ConfirmScreen(),
-        // Placeholder screens — full implementations in tasks 16 and 17.
-        '/citizen-feed': (_) => const _PlaceholderScreen(title: 'Citizen Feed'),
+        // CitizenFeedScreen — implemented in task 16.
+        '/citizen-feed': (_) => const CitizenFeedScreen(),
+        // OfficialDashboardScreen — placeholder until task 17.
         '/official-dash': (_) =>
             const _PlaceholderScreen(title: 'Official Dashboard'),
       },
