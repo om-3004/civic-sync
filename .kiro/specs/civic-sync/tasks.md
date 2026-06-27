@@ -274,7 +274,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - When role changes to `"official"`, navigate to `OfficialDashboardScreen` within 2 s without logout
     - _Requirements: 6.7_
 
-- [ ] 19. Checkpoint — Ensure all tests pass
+- [x] 19. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 20. Write Dockerfile and Cloud Run deployment configuration
