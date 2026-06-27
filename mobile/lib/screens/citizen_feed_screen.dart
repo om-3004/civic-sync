@@ -241,6 +241,11 @@ class _CitizenFeedScreenState extends State<CitizenFeedScreen>
             tooltip: 'Report an issue',
             onPressed: () => Navigator.pushNamed(context, '/report'),
           ),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Profile',
+            onPressed: () => Navigator.pushNamed(context, '/profile'),
+          ),
         ],
         bottom: TabBar(
           controller: _tabController,

@@ -262,14 +262,14 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 8.2**
     - Generate random ticket collections; assert at most 200 returned and sorted by `upvotes` descending
 
-- [ ] 18. Implement role upgrade UI and real-time role listener
-  - [ ] 18.1 Implement "City Official Access" PIN entry in profile settings (`lib/screens/profile_screen.dart`)
+- [x] 18. Implement role upgrade UI and real-time role listener
+  - [x] 18.1 Implement "City Official Access" PIN entry in profile settings (`lib/screens/profile_screen.dart`)
     - Show button for all authenticated users; display PIN prompt on tap
     - Validate non-empty PIN client-side (show validation error without transmitting)
     - Display error on 403; display lockout message on 429; hide button and show "already upgraded" message if already official
     - _Requirements: 6.1, 6.2, 6.3, 6.6, 6.8_
 
-  - [ ] 18.2 Implement real-time user role listener and navigation routing
+  - [x] 18.2 Implement real-time user role listener and navigation routing
     - Subscribe to `/users/{uid}` Firestore document snapshot
     - When role changes to `"official"`, navigate to `OfficialDashboardScreen` within 2 s without logout
     - _Requirements: 6.7_

@@ -20,6 +20,7 @@ import 'screens/auth_screen.dart';
 import 'screens/citizen_feed_screen.dart';
 import 'screens/confirm_screen.dart';
 import 'screens/official_dashboard_screen.dart';
+import 'screens/profile_screen.dart';
 import 'screens/report_flow.dart';
 
 Future<void> main() async {
@@ -66,27 +67,10 @@ class CivicSyncApp extends StatelessWidget {
         '/citizen-feed': (_) => const CitizenFeedScreen(),
         // OfficialDashboardScreen — Kanban management view (task 17).
         '/official-dash': (_) => const OfficialDashboardScreen(),
+        // ProfileScreen — user info and City Official Access (task 18).
+        '/profile': (_) => const ProfileScreen(),
       },
     );
   }
 }
 
-/// Temporary placeholder screen used while CitizenFeedScreen and
-/// OfficialDashboardScreen are implemented in tasks 16 and 17.
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-  const _PlaceholderScreen({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text(
-          'Coming soon',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-      ),
-    );
-  }
-}
