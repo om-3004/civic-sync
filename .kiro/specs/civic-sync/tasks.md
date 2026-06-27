@@ -211,7 +211,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Display error and return to sign-in screen on OAuth failure or backend 401
     - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 15. Implement citizen issue reporting flow
+- [x] 15. Implement citizen issue reporting flow
   - [x] 15.1 Implement camera-only capture with GPS (`lib/screens/report_flow.dart`)
     - Open native camera (gallery disabled at widget level); request camera permission (show error if denied)
     - Poll `geolocator` for coordinates with 50 m accuracy for up to 15 s; show error if unable to acquire
@@ -222,7 +222,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - `POST /triage` with `image_url` and coordinates; display loading state
     - _Requirements: 2.6, 2.7, 3.1_
 
-  - [ ] 15.3 Implement AI confirmation screen (`lib/screens/confirm_screen.dart`)
+  - [x] 15.3 Implement AI confirmation screen (`lib/screens/confirm_screen.dart`)
     - Display `category` dropdown, `title` text field (100-char limit), `description` text field (500-char limit) pre-filled from triage response
     - On AI error response show fallback manual-entry screen
     - On confirmation `POST /tickets`; handle duplicate response by prompting upvote
