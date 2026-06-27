@@ -217,7 +217,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Poll `geolocator` for coordinates with 50 m accuracy for up to 15 s; show error if unable to acquire
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-  - [ ] 15.2 Implement image upload and AI triage call (`lib/services/triage_service.dart`)
+  - [x] 15.2 Implement image upload and AI triage call (`lib/services/triage_service.dart`)
     - Upload captured image to Cloud Storage for Firebase; on failure show retry message without re-capturing
     - `POST /triage` with `image_url` and coordinates; display loading state
     - _Requirements: 2.6, 2.7, 3.1_
