@@ -192,7 +192,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - Start archival goroutine; register all HTTP routes; call `http.ListenAndServe(":8080")`
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
 
-  - [ ]* 12.4 Write property test for startup 503 behavior (Property 17)
+  - [x] 12.4 Write property test for startup 503 behavior (Property 17)
     - **Property 17: Backend Returns HTTP 503 When Any Required Dependency Fails to Initialize**
     - **Validates: Requirements 11.5**
     - Generate all subsets of `{Firestore, GoogleKeys, Gemini}` where at least one fails; assert server returns 503 for all incoming requests when any dependency failed
