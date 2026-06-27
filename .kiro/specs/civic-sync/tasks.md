@@ -201,7 +201,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 14. Implement Flutter Android application scaffold
-  - [ ] 14.1 Set up Flutter Android project with required packages
+  - [x] 14.1 Set up Flutter Android project with required packages
     - Add `google_sign_in`, `firebase_auth`, `cloud_firestore`, `firebase_storage`, `image_picker` (camera-only), `geolocator`, `google_maps_flutter`
     - Configure `google-services.json` and Firebase initialization in `main.dart`
     - _Requirements: 1.1, 2.1, 7.1_
