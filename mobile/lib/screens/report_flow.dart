@@ -1,12 +1,14 @@
-// Report flow screen — camera-only capture with GPS coordinate acquisition.
+// Report flow screen — camera-only capture with GPS coordinate acquisition,
+// image upload, and AI triage.
 //
 // This screen handles:
 //   1. Camera permission check → open native camera (gallery disabled).
 //   2. GPS coordinate acquisition with ≤50 m accuracy within 15 seconds.
-//   3. Combined state management to gate the "Continue" button on both
+//   3. Combined state management to gate the "Upload & Analyze" button on both
 //      a captured image AND valid GPS coordinates being available.
+//   4. Upload image to Firebase Storage and POST /triage (Req 2.6, 2.7, 3.1).
 //
-// Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
+// Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 3.1
 
 import 'dart:io';
 
@@ -14,15 +16,19 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../services/triage_service.dart';
+
 /// Screen that drives the "new issue report" flow.
 ///
 /// The screen enforces authenticity-locked capture:
 /// - Only the native camera is used — gallery access is never offered.
 /// - GPS coordinates must be obtained at ≤50 m accuracy within 15 s before
 ///   the report can continue.
+/// - Once both are ready, the citizen can upload the image and trigger AI
+///   triage via the backend (Req 2.6, 3.1).
 ///
-/// When both an image and valid GPS coordinates are available the [onCaptureComplete]
-/// callback is invoked (or the default placeholder navigation fires).
+/// When the full triage succeeds the [onCaptureComplete] callback is invoked
+/// (or the default placeholder navigation fires).
 class ReportFlowScreen extends StatefulWidget {
   /// Called when the citizen successfully captures an image **and** obtains
   /// valid GPS coordinates. Both arguments are guaranteed non-null.
@@ -58,6 +64,22 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
   /// Non-null when GPS acquisition has failed (permission denied or timeout).
   String? _locationError;
 
+  /// True while upload and/or triage is in progress.
+  bool _isUploading = false;
+
+  /// Non-null when image upload to Firebase Storage failed (Req 2.7).
+  String? _uploadError;
+
+  /// Non-null when the backend triage call failed.
+  String? _triageError;
+
+  /// Last successfully retrieved triage result.
+  TriageResult? _triageResult;
+
+  // ── Service ───────────────────────────────────────────────────────────────
+
+  final TriageService _triageService = TriageService();
+
   // ── ImagePicker singleton ─────────────────────────────────────────────────
 
   final ImagePicker _picker = ImagePicker();
@@ -68,28 +90,13 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
   void initState() {
     super.initState();
     // Pre-check camera permission on screen load so the UI immediately shows
-    // an error state if the user has previously denied camera access, rather
-    // than waiting for the first tap.
+    // an error state if the user has previously denied camera access.
     _checkCameraPermission();
   }
 
   // ── Permission helpers ────────────────────────────────────────────────────
 
-  /// Checks camera permission status and sets [_cameraError] if denied.
-  ///
-  /// On Android, image_picker requests the CAMERA permission itself when
-  /// ImageSource.camera is used. We pre-check via geolocator's
-  /// Geolocator.checkPermission pattern is not available for camera, so we
-  /// rely on image_picker's own flow and handle the resulting null XFile as
-  /// the denied signal. This method only does a lightweight readiness check
-  /// by inspecting whether geolocator services are available, used here
-  /// to surface a warning early rather than at capture time.
-  ///
-  /// Camera permission itself is handled directly by image_picker when the
-  /// user taps the capture button.
   Future<void> _checkCameraPermission() async {
-    // image_picker manages camera permission natively; no pre-check needed.
-    // Reset any previous camera error so the UI is in a clean initial state.
     if (mounted) {
       setState(() {
         _cameraError = null;
@@ -98,9 +105,6 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
   }
 
   /// Checks and requests location permission using the geolocator API.
-  ///
-  /// Returns true if permission is granted (or already granted), false
-  /// otherwise. Sets [_locationError] on denial.
   Future<bool> _ensureLocationPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
 
@@ -120,7 +124,6 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
       return false;
     }
 
-    // Check that location services (GPS hardware) are actually enabled.
     final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (mounted) {
@@ -147,37 +150,29 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
       _isCapturing = true;
       _cameraError = null;
       _locationError = null;
-      // Reset previous results so UI reflects the new capture attempt.
+      _uploadError = null;
+      _triageError = null;
+      _triageResult = null;
       _capturedImage = null;
       _location = null;
     });
 
     try {
-      // ImageSource.camera: uses the native camera; gallery is never available
-      // to the citizen through this call (Req 2.3).
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera,
-        // Request a reasonable quality to keep upload size manageable.
         imageQuality: 85,
         preferredCameraDevice: CameraDevice.rear,
       );
 
       if (photo == null) {
-        // User cancelled the camera (or permission was denied — image_picker
-        // returns null in both cases on Android). Req 2.2: show error if
-        // denied; here we can't distinguish cancellation from denial at the
-        // Dart level, so we simply leave the screen in its initial state.
-        // The capture button remains enabled so the citizen can try again.
         if (mounted) {
           setState(() {
-            // No explicit error — the citizen just closed the camera.
             _isCapturing = false;
           });
         }
         return;
       }
 
-      // Photo captured successfully.
       if (mounted) {
         setState(() {
           _capturedImage = photo;
@@ -185,11 +180,8 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
         });
       }
 
-      // Immediately start GPS acquisition (Req 2.4).
       await _acquireGps();
     } catch (e) {
-      // Catches any platform exception thrown by image_picker when camera
-      // permission is permanently denied (Req 2.2).
       if (mounted) {
         setState(() {
           _isCapturing = false;
@@ -204,9 +196,6 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
   // ── GPS acquisition ───────────────────────────────────────────────────────
 
   /// Polls geolocator for a position with ≤50 m accuracy within 15 seconds.
-  ///
-  /// On failure (permission denied, service unavailable, or timeout) sets
-  /// [_locationError] and clears [_location], preventing submission (Req 2.5).
   Future<void> _acquireGps() async {
     if (mounted) {
       setState(() {
@@ -216,7 +205,6 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
       });
     }
 
-    // Ensure location permission before calling getCurrentPosition.
     final bool hasPermission = await _ensureLocationPermission();
     if (!hasPermission) {
       if (mounted) {
@@ -226,9 +214,6 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
     }
 
     try {
-      // Req 2.4: LocationAccuracy.high corresponds to ≤50 m on Android.
-      // Req 2.5: 15-second timeout — if no position is obtained within 15 s
-      //          the TimeoutException propagates to the catch block below.
       final Position position = await Geolocator.getCurrentPosition(
         locationSettings: AndroidSettings(
           accuracy: LocationAccuracy.high,
@@ -236,9 +221,6 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
         ),
       );
 
-      // Verify the returned accuracy satisfies the ≤50 m requirement.
-      // On some devices getCurrentPosition may return a cached position with
-      // lower accuracy even when LocationAccuracy.high is requested.
       if (position.accuracy > 50.0) {
         if (mounted) {
           setState(() {
@@ -275,8 +257,6 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
         });
       }
     } catch (_) {
-      // Covers TimeoutException (15 s elapsed with no valid fix) and any
-      // other unexpected errors (Req 2.5).
       if (mounted) {
         setState(() {
           _isLocating = false;
@@ -288,33 +268,114 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
     }
   }
 
-  // ── Continue handler ──────────────────────────────────────────────────────
+  // ── Upload & triage flow ──────────────────────────────────────────────────
 
-  /// Invoked when the citizen taps "Continue" after both image and GPS are
-  /// ready. Delegates to [widget.onCaptureComplete] or shows a placeholder.
-  void _onContinue() {
+  /// Uploads the captured image then calls the backend /triage endpoint.
+  ///
+  /// On [StorageUploadException] sets [_uploadError] and surfaces a Retry
+  /// Upload button — the citizen does NOT need to re-take the photo (Req 2.7).
+  /// On [TriageException] sets [_triageError] with a Retry Analysis button.
+  /// On full success invokes [widget.onCaptureComplete] or navigates to
+  /// /triage-confirm. Falls back to a SnackBar if the route is not yet wired.
+  Future<void> _uploadAndTriage() async {
     final image = _capturedImage;
     final location = _location;
 
-    // Guard: both must be non-null (the button is hidden otherwise, but
-    // defensive check is cheap).
     if (image == null || location == null) return;
 
+    setState(() {
+      _isUploading = true;
+      _uploadError = null;
+      _triageError = null;
+    });
+
+    // Step 1: Upload image to Firebase Storage (Req 2.6).
+    String imageUrl;
+    try {
+      imageUrl = await _triageService.uploadImage(image);
+    } on StorageUploadException catch (e) {
+      // Req 2.7: show retry without re-capturing.
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+          _uploadError = e.message;
+        });
+      }
+      return;
+    }
+
+    // Step 2: POST /triage with Storage URL + coordinates (Req 3.1).
+    TriageResult result;
+    try {
+      result = await _triageService.triage(
+        imageUrl: imageUrl,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      );
+    } on TriageException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+          _triageError = e.message;
+        });
+      }
+      return;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _isUploading = false;
+      _triageResult = result;
+    });
+
+    // Step 3: Hand off result.
     if (widget.onCaptureComplete != null) {
       widget.onCaptureComplete!(image, location);
     } else {
-      // Placeholder behaviour until the triage screen is implemented.
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Captured: ${image.name}\n'
-            'GPS: ${location.latitude.toStringAsFixed(5)}, '
-            '${location.longitude.toStringAsFixed(5)} '
-            '(±${location.accuracy.toStringAsFixed(0)} m)',
-          ),
-          duration: const Duration(seconds: 4),
-        ),
+      // Try to navigate to the triage confirm screen (wired in task 15.3).
+      // Until then, fall back to a SnackBar placeholder.
+      final bool navigated = await _tryNavigateToTriageConfirm(
+        image: image,
+        location: location,
+        triageResult: result,
       );
+      if (!navigated && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Triage complete!\n'
+              'Category: ${result.category}\n'
+              'Title: ${result.title}',
+            ),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Attempts to push `/triage-confirm` with [triageResult], [image], and
+  /// [location] as route arguments. Returns true if navigation succeeded.
+  Future<bool> _tryNavigateToTriageConfirm({
+    required XFile image,
+    required Position location,
+    required TriageResult triageResult,
+  }) async {
+    try {
+      await Navigator.pushNamed(
+        context,
+        '/triage-confirm',
+        arguments: {
+          'triageResult': triageResult,
+          'image': image,
+          'location': location,
+        },
+      );
+      return true;
+    } catch (_) {
+      // Route does not exist yet — task 15.3 will register it.
+      return false;
     }
   }
 
@@ -322,7 +383,7 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool canContinue =
+    final bool canUpload =
         _capturedImage != null && _location != null && !_isLocating;
 
     return Scaffold(
@@ -382,26 +443,100 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
 
               const SizedBox(height: 32),
 
-              // ── Continue button ─────────────────────────────────────────
-              // Visible only when both image and GPS are ready (Req 2.5).
-              if (canContinue)
-                ElevatedButton.icon(
-                  onPressed: _onContinue,
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text('Continue'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(52),
-                    backgroundColor: const Color(0xFF1A73E8),
-                    foregroundColor: Colors.white,
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+              // ── Upload error with retry (Req 2.7) ───────────────────────
+              if (_uploadError != null) ...[
+                _ErrorBanner(message: _uploadError!),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _isUploading ? null : _uploadAndTriage,
+                  icon: const Icon(Icons.upload),
+                  label: const Text('Retry Upload'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                    foregroundColor: Colors.red.shade700,
+                    side: BorderSide(color: Colors.red.shade300),
                   ),
                 ),
+                const SizedBox(height: 12),
+              ],
+
+              // ── Triage error with retry ─────────────────────────────────
+              if (_triageError != null) ...[
+                _ErrorBanner(message: _triageError!),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _isUploading ? null : _uploadAndTriage,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry Analysis'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                    foregroundColor: Colors.orange.shade800,
+                    side: BorderSide(color: Colors.orange.shade300),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // ── Triage success banner ───────────────────────────────────
+              if (_triageResult != null && !_isUploading) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    border: Border.all(color: Colors.green.shade200),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle,
+                          color: Colors.green.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Triage complete: ${_triageResult!.category}',
+                          style: TextStyle(
+                              color: Colors.green.shade700, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // ── Upload & Analyze button / loading indicator ─────────────
+              if (canUpload) ...[
+                if (_isUploading)
+                  const Column(
+                    children: [
+                      CircularProgressIndicator(color: Color(0xFF1A73E8)),
+                      SizedBox(height: 12),
+                      Text(
+                        'Uploading and analysing…',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  )
+                else
+                  ElevatedButton.icon(
+                    onPressed: _uploadAndTriage,
+                    icon: const Icon(Icons.cloud_upload_outlined),
+                    label: const Text('Upload & Analyze'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      backgroundColor: const Color(0xFF1A73E8),
+                      foregroundColor: Colors.white,
+                      textStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
 
               // Hint when we have an image but GPS is still pending/failed.
-              if (_capturedImage != null && !canContinue) ...[
+              if (_capturedImage != null && !canUpload) ...[
                 if (_isLocating)
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
@@ -492,7 +627,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Red error banner displayed when camera or GPS has an error.
+/// Red error banner displayed when camera, GPS, upload, or triage has an error.
 class _ErrorBanner extends StatelessWidget {
   final String message;
 
@@ -547,7 +682,6 @@ class _ImageCaptureCard extends StatelessWidget {
         child: Column(
           children: [
             if (capturedImage != null) ...[
-              // ── Image preview ─────────────────────────────────────────
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.file(
@@ -570,14 +704,12 @@ class _ImageCaptureCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              // Allow re-capture.
               TextButton.icon(
                 onPressed: isCapturing ? null : onCapture,
                 icon: const Icon(Icons.camera_alt_outlined),
                 label: const Text('Retake Photo'),
               ),
             ] else ...[
-              // ── Capture button ────────────────────────────────────────
               Container(
                 height: 160,
                 decoration: BoxDecoration(
@@ -605,8 +737,6 @@ class _ImageCaptureCard extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                // Disable button when camera error is present (Req 2.2) or
-                // a capture is already in progress.
                 onPressed:
                     (isCapturing || cameraError != null) ? null : onCapture,
                 icon: isCapturing
@@ -624,7 +754,6 @@ class _ImageCaptureCard extends StatelessWidget {
                   minimumSize: const Size.fromHeight(48),
                   backgroundColor: const Color(0xFF1A73E8),
                   foregroundColor: Colors.white,
-                  // Greyed out when camera access is denied.
                   disabledBackgroundColor: Colors.grey.shade300,
                 ),
               ),
@@ -661,7 +790,6 @@ class _GpsStatusCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (isLocating) ...[
-              // ── Loading state ─────────────────────────────────────────
               Row(
                 children: [
                   const SizedBox(
@@ -682,7 +810,6 @@ class _GpsStatusCard extends StatelessWidget {
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
             ] else if (location != null) ...[
-              // ── Success state ─────────────────────────────────────────
               Row(
                 children: [
                   const Icon(Icons.gps_fixed, color: Colors.green, size: 20),
@@ -712,7 +839,6 @@ class _GpsStatusCard extends StatelessWidget {
                 value: '±${location!.accuracy.toStringAsFixed(0)} m',
               ),
             ] else if (locationError != null) ...[
-              // ── Error state (Req 2.5) ─────────────────────────────────
               _ErrorBanner(message: locationError!),
               if (onRetry != null) ...[
                 const SizedBox(height: 10),
@@ -726,10 +852,10 @@ class _GpsStatusCard extends StatelessWidget {
                 ),
               ],
             ] else ...[
-              // ── Idle state (waiting for a photo first) ────────────────
               Row(
                 children: [
-                  Icon(Icons.location_off, color: Colors.grey.shade400, size: 20),
+                  Icon(Icons.location_off,
+                      color: Colors.grey.shade400, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'GPS will be acquired after the photo is taken.',
