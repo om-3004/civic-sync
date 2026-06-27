@@ -1,21 +1,133 @@
-// Auth screen stub — placeholder for task 14.2.
+// Auth screen — Google OAuth sign-in with backend token verification.
 //
-// This file satisfies the routing requirement from main.dart and will be
-// fully implemented in task 14.2 with:
-//   - GoogleSignIn().signIn() call
-//   - ID token extraction and POST /auth/login to the backend
-//   - Role-based navigation to CitizenFeedScreen or OfficialDashboardScreen
+// Sign-in flow:
+//   1. GoogleSignIn.instance.authenticate() — triggers the Google account
+//      picker (google_sign_in 7.x singleton API).
+//   2. Extract idToken from account.authentication (synchronous getter).
+//   3. POST /auth/login with Authorization: Bearer <idToken>.
+//   4. Navigate to /citizen-feed or /official-dash based on the role field.
 //
 // Requirements: 1.1, 1.2, 1.3
 
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
-/// Placeholder authentication screen.
+import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
+
+// Backend base URL — override at build time via --dart-define=BACKEND_URL=...
+// Defaults to the Android emulator loopback to the host machine.
+const String _backendBaseUrl = String.fromEnvironment(
+  'BACKEND_URL',
+  defaultValue: 'http://10.0.2.2:8080',
+);
+
+/// Full Google OAuth authentication screen.
 ///
-/// Displays a "Sign in with Google" button stub; actual OAuth logic is
-/// implemented in task 14.2.
-class AuthScreen extends StatelessWidget {
+/// Manages loading state and error messages while coordinating the
+/// Google sign-in flow and backend login call.
+class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
+
+  @override
+  State<AuthScreen> createState() => _AuthScreenState();
+}
+
+class _AuthScreenState extends State<AuthScreen> {
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  /// Executes the full sign-in flow:
+  ///   Google OAuth → ID token → POST /auth/login → role-based navigation.
+  Future<void> _signIn() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Step 1: Trigger the Google account picker.
+      // GoogleSignIn 7.x uses a singleton with authenticate().
+      // Throws GoogleSignInException on failure; the code field distinguishes
+      // cancellation from other errors.
+      late final GoogleSignInAccount account;
+      try {
+        account = await GoogleSignIn.instance.authenticate();
+      } on GoogleSignInException catch (e) {
+        // Req 1.2: User cancelled — silent return, no error shown.
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          return;
+        }
+        // Any other OAuth failure — show error and stay on sign-in screen.
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Authentication failed. Please try again.';
+          });
+        }
+        return;
+      }
+
+      // Step 2: Extract the ID token from the signed-in account.
+      // authentication is a synchronous getter in google_sign_in 7.x.
+      final String? idToken = account.authentication.idToken;
+
+      if (idToken == null) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Authentication failed. Please try again.';
+          });
+        }
+        return;
+      }
+
+      // Step 3: POST to backend with the Google ID token.
+      // Req 1.3: token is transmitted to backend before granting access.
+      final http.Response response = await http.post(
+        Uri.parse('$_backendBaseUrl/auth/login'),
+        headers: {
+          'Authorization': 'Bearer $idToken',
+        },
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        // Step 4: Parse role and navigate accordingly.
+        final Map<String, dynamic> body =
+            jsonDecode(response.body) as Map<String, dynamic>;
+        final String role = (body['role'] as String?) ?? 'citizen';
+
+        if (role == 'official') {
+          Navigator.pushReplacementNamed(context, '/official-dash');
+        } else {
+          Navigator.pushReplacementNamed(context, '/citizen-feed');
+        }
+      } else if (response.statusCode == 401) {
+        // Req 1.2: Backend rejected the token — show error, stay on sign-in.
+        setState(() {
+          _errorMessage =
+              'Sign-in failed: invalid or expired credentials.';
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Sign-in failed. Please try again.';
+        });
+      }
+    } catch (_) {
+      // Network error or any unexpected exception.
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Sign-in failed. Please try again.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +140,7 @@ class AuthScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // App logo / wordmark placeholder
+                // App logo / wordmark
                 const Icon(
                   Icons.location_city,
                   size: 72,
@@ -51,25 +163,36 @@ class AuthScreen extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 48),
-                // Sign-in button — TODO: wire to GoogleSignIn in task 14.2
-                ElevatedButton.icon(
-                  onPressed: () {
-                    // TODO (task 14.2): call GoogleSignIn().signIn(), extract
-                    // ID token, POST to /auth/login, navigate by role.
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Google Sign-In — implemented in task 14.2'),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.login),
-                  label: const Text('Sign in with Google'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(50),
-                    backgroundColor: const Color(0xFF1A73E8),
-                    foregroundColor: Colors.white,
+
+                // Sign-in button or loading indicator.
+                if (_isLoading)
+                  const CircularProgressIndicator(
+                    color: Color(0xFF1A73E8),
+                  )
+                else
+                  ElevatedButton.icon(
+                    onPressed: _signIn,
+                    icon: const Icon(Icons.login),
+                    label: const Text('Sign in with Google'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      backgroundColor: const Color(0xFF1A73E8),
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                ),
+
+                // Error message (Req 1.2: shown on OAuth failure or 401).
+                if (_errorMessage != null && _errorMessage!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

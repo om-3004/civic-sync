@@ -5,13 +5,16 @@
 //      operations (including Firebase.initializeApp).
 //   2. Firebase.initializeApp() — initialises all Firebase services:
 //        firebase_auth, cloud_firestore, firebase_storage.
-//   3. Run the MaterialApp with a role-aware routing stub that hands off to
+//   3. GoogleSignIn.instance.initialize() — required once before any Google
+//      Sign-In calls (google_sign_in 7.x singleton API).
+//   4. Run the MaterialApp with a role-aware routing stub that hands off to
 //      AuthScreen while the user is unauthenticated.
 //
 // Requirements: 1.1 (Google OAuth), 2.1 (camera capture), 7.1 (map feed).
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'screens/auth_screen.dart';
 
@@ -23,6 +26,10 @@ Future<void> main() async {
   // TODO: Replace the default FirebaseOptions with the real values from your
   //       Firebase project once google-services.json is configured.
   await Firebase.initializeApp();
+
+  // Initialise Google Sign-In singleton — required exactly once before any
+  // GoogleSignIn.instance method calls (google_sign_in 7.x breaking change).
+  await GoogleSignIn.instance.initialize();
 
   runApp(const CivicSyncApp());
 }
@@ -49,11 +56,31 @@ class CivicSyncApp extends StatelessWidget {
       initialRoute: '/auth',
       routes: {
         '/auth': (_) => const AuthScreen(),
-        // Subsequent screens are registered here as they are implemented:
-        // '/citizen-feed'  : (_) => const CitizenFeedScreen(),
-        // '/official-dash' : (_) => const OfficialDashboardScreen(),
-        // '/report'        : (_) => const ReportFlowScreen(),
+        // Placeholder screens — full implementations in tasks 16 and 17.
+        '/citizen-feed': (_) => const _PlaceholderScreen(title: 'Citizen Feed'),
+        '/official-dash': (_) =>
+            const _PlaceholderScreen(title: 'Official Dashboard'),
       },
+    );
+  }
+}
+
+/// Temporary placeholder screen used while CitizenFeedScreen and
+/// OfficialDashboardScreen are implemented in tasks 16 and 17.
+class _PlaceholderScreen extends StatelessWidget {
+  final String title;
+  const _PlaceholderScreen({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(
+        child: Text(
+          'Coming soon',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+      ),
     );
   }
 }

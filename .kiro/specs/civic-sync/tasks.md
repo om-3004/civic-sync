@@ -200,13 +200,13 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
 - [x] 13. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 14. Implement Flutter Android application scaffold
+- [x] 14. Implement Flutter Android application scaffold
   - [x] 14.1 Set up Flutter Android project with required packages
     - Add `google_sign_in`, `firebase_auth`, `cloud_firestore`, `firebase_storage`, `image_picker` (camera-only), `geolocator`, `google_maps_flutter`
     - Configure `google-services.json` and Firebase initialization in `main.dart`
     - _Requirements: 1.1, 2.1, 7.1_
 
-  - [ ] 14.2 Implement Google OAuth sign-in screen (`lib/screens/auth_screen.dart`)
+  - [x] 14.2 Implement Google OAuth sign-in screen (`lib/screens/auth_screen.dart`)
     - Call `GoogleSignIn().signIn()`, obtain ID token, `POST /auth/login` to backend
     - Display error and return to sign-in screen on OAuth failure or backend 401
     - _Requirements: 1.1, 1.2, 1.3_
