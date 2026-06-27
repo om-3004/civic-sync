@@ -197,7 +197,7 @@ Implement the full CivicSync platform in Go (backend) and Dart/Flutter (Android 
     - **Validates: Requirements 11.5**
     - Generate all subsets of `{Firestore, GoogleKeys, Gemini}` where at least one fails; assert server returns 503 for all incoming requests when any dependency failed
 
-- [ ] 13. Checkpoint — Ensure all tests pass
+- [x] 13. Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 14. Implement Flutter Android application scaffold
