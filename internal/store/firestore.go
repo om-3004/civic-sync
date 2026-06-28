@@ -267,3 +267,9 @@ func (s *FirestoreStore) HasUserUpvoted(ctx context.Context, ticketID, uid strin
 	}
 	return false, nil
 }
+
+// DeleteTicket permanently removes a ticket document from Firestore.
+func (s *FirestoreStore) DeleteTicket(ctx context.Context, id string) error {
+	_, err := s.client.Collection(collectionTickets).Doc(id).Delete(ctx)
+	return err
+}

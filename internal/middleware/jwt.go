@@ -30,10 +30,11 @@ type jwtClaims struct {
 	Exp   int64  `json:"exp"`
 }
 
-const (
-	expectedIssuer = "accounts.google.com"
-)
-
+// Google ID tokens may use either issuer value — both are valid per Google's docs.
+var validIssuers = map[string]bool{
+	"accounts.google.com":         true,
+	"https://accounts.google.com": true,
+}
 // JWTVerify returns an HTTP middleware that validates a Google ID token supplied
 // as a Bearer token in the Authorization header.
 //
@@ -44,6 +45,29 @@ const (
 // initialised at startup (Req 1.4).
 func JWTVerify(keyCache *auth.KeyCache) func(http.Handler) http.Handler {
 	clientID := os.Getenv("GOOGLE_CLIENT_ID")
+	projectID := os.Getenv("PROJECT_ID")
+
+	// Build the set of accepted audiences:
+	//   - GOOGLE_CLIENT_ID: OAuth web client (Postman / OAuth Playground)
+	//   - PROJECT_ID: Firebase Auth tokens from the Flutter app
+	validAudiences := map[string]bool{}
+	if clientID != "" {
+		validAudiences[clientID] = true
+	}
+	if projectID != "" {
+		validAudiences[projectID] = true
+	}
+
+	// Build the set of accepted issuers:
+	//   - accounts.google.com / https://accounts.google.com: standard Google OAuth tokens
+	//   - https://securetoken.google.com/<project>: Firebase Auth tokens
+	acceptedIssuers := map[string]bool{
+		"accounts.google.com":         true,
+		"https://accounts.google.com": true,
+	}
+	if projectID != "" {
+		acceptedIssuers["https://securetoken.google.com/"+projectID] = true
+	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -118,14 +142,14 @@ func JWTVerify(keyCache *auth.KeyCache) func(http.Handler) http.Handler {
 				return
 			}
 
-			// iss: must be Google's issuer
-			if claims.Iss != expectedIssuer {
+			// iss: must be one of Google's valid issuers
+			if !acceptedIssuers[claims.Iss] {
 				http.Error(w, `{"error":"invalid JWT issuer"}`, http.StatusUnauthorized)
 				return
 			}
 
-			// aud: must match our client ID
-			if clientID != "" && claims.Aud != clientID {
+			// aud: must match one of the accepted client IDs
+			if len(validAudiences) > 0 && !validAudiences[claims.Aud] {
 				http.Error(w, `{"error":"invalid JWT audience"}`, http.StatusUnauthorized)
 				return
 			}

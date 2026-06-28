@@ -19,6 +19,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'screens/auth_screen.dart';
 import 'screens/citizen_feed_screen.dart';
 import 'screens/confirm_screen.dart';
+import 'screens/my_issues_screen.dart';
 import 'screens/official_dashboard_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/report_flow.dart';
@@ -69,6 +70,8 @@ class CivicSyncApp extends StatelessWidget {
         '/official-dash': (_) => const OfficialDashboardScreen(),
         // ProfileScreen — user info and City Official Access (task 18).
         '/profile': (_) => const ProfileScreen(),
+        // MyIssuesScreen — issues reported by the current user.
+        '/my-issues': (_) => const MyIssuesScreen(),
       },
     );
   }

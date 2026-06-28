@@ -339,6 +339,7 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
         image: image,
         location: location,
         triageResult: result,
+        imageUrl: imageUrl,
       );
       if (!navigated && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -361,6 +362,7 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
     required XFile image,
     required Position location,
     required TriageResult triageResult,
+    required String imageUrl,
   }) async {
     try {
       await Navigator.pushNamed(
@@ -370,11 +372,11 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
           'triageResult': triageResult,
           'image': image,
           'location': location,
+          'imageUrl': imageUrl,
         },
       );
       return true;
     } catch (_) {
-      // Route does not exist yet — task 15.3 will register it.
       return false;
     }
   }

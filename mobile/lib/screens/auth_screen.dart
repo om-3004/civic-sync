@@ -11,6 +11,7 @@
 
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
@@ -79,6 +80,13 @@ class _AuthScreenState extends State<AuthScreen> {
         }
         return;
       }
+
+      // Step 2b: Sign into Firebase Auth with the Google credential so that
+      // Firestore security rules (request.auth != null) are satisfied.
+      final googleCredential = GoogleAuthProvider.credential(
+        idToken: idToken,
+      );
+      await FirebaseAuth.instance.signInWithCredential(googleCredential);
 
       // Step 3: POST to backend with the Google ID token.
       // Req 1.3: token is transmitted to backend before granting access.

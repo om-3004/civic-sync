@@ -42,12 +42,12 @@
             </intent-filter>
         </activity>
 
-        <!-- Google Maps API key — TODO: replace with your actual Maps API key
+        <!-- Google Maps API key — replace with your actual Maps API key
              obtained from https://console.cloud.google.com/
              Required by google_maps_flutter (Req 7.1) -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="TODO_REPLACE_WITH_GOOGLE_MAPS_API_KEY" />
+            android:value="${MAPS_API_KEY}" />
 
         <!-- Flutter embedding version marker; do not delete. -->
         <meta-data
