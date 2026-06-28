@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
 	"google.golang.org/genai"
@@ -13,8 +15,8 @@ const (
 	// modelName is the Gemini model used for image triage.
 	modelName = "gemini-2.5-flash"
 
-	// triageTimeout is the maximum time allowed for a single Gemini API call.
-	triageTimeout = 10 * time.Second
+	// triageTimeout is the maximum time allowed for image fetch + Gemini API call.
+	triageTimeout = 30 * time.Second
 
 	// systemInstruction is the prompt that steers the model toward structured
 	// civic-hazard classification output.
@@ -22,13 +24,41 @@ const (
 Analyze the provided image and location, then respond ONLY with valid JSON
 matching this schema (no markdown, no explanation):
 {
-  "category":    "<one of: Pothole | Water Clogging | Drain Overflow | Electrical Hazard | Other>",
+  "category":    "<one of: Pothole | Water Clogging | Drain Overflow | Electrical Hazard | Street Light Out | Garbage Dumping | Broken Road | Tree Fallen | Sewage Overflow | Other>",
   "title":       "<concise title, max 100 chars>",
   "description": "<detailed description, max 500 chars>"
 }`
 )
 
-// ErrTimeout is returned when the Gemini API call exceeds triageTimeout.
+// httpClient is used to fetch images from public URLs before sending to Gemini.
+var httpClient = &http.Client{Timeout: 8 * time.Second}
+
+// fetchImageBytes downloads an image from a public URL and returns its raw bytes
+// and MIME type. Returns an error if the download fails or the response is not
+// a 2xx status.
+func fetchImageBytes(ctx context.Context, imageURL string) ([]byte, string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("triage: could not build image request: %w", err)
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("triage: image fetch failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, "", fmt.Errorf("triage: image fetch returned status %d", resp.StatusCode)
+	}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("triage: reading image body failed: %w", err)
+	}
+	mimeType := resp.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = "image/jpeg"
+	}
+	return data, mimeType, nil
+}
 // The HTTP handler should map this to HTTP 504.
 var ErrTimeout = errors.New("triage: gemini API request timed out")
 
@@ -80,11 +110,16 @@ func (a *Agent) Triage(ctx context.Context, imageURL string, lat, lng float64) (
 	timedCtx, cancel := context.WithTimeout(ctx, triageTimeout)
 	defer cancel()
 
+	// Fetch the image bytes from the public URL so we can send them inline.
+	// This works with any public HTTP/HTTPS URL, not just GCS URIs.
+	imgBytes, mimeType, err := fetchImageBytes(timedCtx, imageURL)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrAPIFailure, err)
+	}
+
 	// Build the user turn: image part + location text + task instruction.
 	userParts := []*genai.Part{
-		// Pass the Cloud Storage image URL as a FileData URI part.
-		// Gemini 2.5 Flash can fetch images directly from Cloud Storage URLs.
-		genai.NewPartFromURI(imageURL, "image/jpeg"),
+		genai.NewPartFromBytes(imgBytes, mimeType),
 		genai.NewPartFromText(
 			fmt.Sprintf(
 				"Location: latitude=%.6f, longitude=%.6f\nClassify the infrastructure hazard shown in this image.",

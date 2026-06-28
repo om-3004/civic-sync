@@ -29,6 +29,11 @@ var allowedCategories = map[string]bool{
 	"Water Clogging":    true,
 	"Drain Overflow":    true,
 	"Electrical Hazard": true,
+	"Street Light Out":  true,
+	"Garbage Dumping":   true,
+	"Broken Road":       true,
+	"Tree Fallen":       true,
+	"Sewage Overflow":   true,
 	"Other":             true,
 }
 

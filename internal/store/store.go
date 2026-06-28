@@ -37,4 +37,8 @@ type Store interface {
 
 	// HasUserUpvoted reports whether the given user has already upvoted the ticket.
 	HasUserUpvoted(ctx context.Context, ticketID, uid string) (bool, error)
+
+	// DeleteTicket permanently removes a ticket document from Firestore.
+	// The caller is responsible for verifying ownership before calling this.
+	DeleteTicket(ctx context.Context, id string) error
 }

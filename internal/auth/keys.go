@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	googleCertsURL    = "https://www.googleapis.com/oauth2/v3/certs"
-	keyRefreshInterval = time.Hour
+	googleCertsURL        = "https://www.googleapis.com/oauth2/v3/certs"
+	firebaseCertsURL      = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"
+	keyRefreshInterval    = time.Hour
 )
 
 // jwk represents a single JSON Web Key as returned by Google's JWKS endpoint.
@@ -84,40 +85,52 @@ func (kc *KeyCache) startRefresh(ctx context.Context) {
 	}
 }
 
-// fetchKeys downloads Google's JWKS, parses it, and atomically replaces the
+// fetchKeys downloads Google's JWKS from both the standard OAuth endpoint and
+// the Firebase Auth endpoint, parses them, and atomically replaces the
 // in-memory key map. Called once at startup and then on every refresh tick.
 func (kc *KeyCache) fetchKeys() error {
-	resp, err := http.Get(googleCertsURL) //nolint:noctx // background refresh; no per-request context needed
-	if err != nil {
-		return fmt.Errorf("GET %s: %w", googleCertsURL, err)
-	}
-	defer resp.Body.Close()
+	newKeys := make(map[string]*rsa.PublicKey)
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("GET %s returned status %d", googleCertsURL, resp.StatusCode)
-	}
-
-	var set jwks
-	if err := json.NewDecoder(resp.Body).Decode(&set); err != nil {
-		return fmt.Errorf("decoding JWKS response: %w", err)
-	}
-
-	newKeys := make(map[string]*rsa.PublicKey, len(set.Keys))
-	for _, k := range set.Keys {
-		if k.Kty != "RSA" || k.Use != "sig" {
-			continue
+	for _, url := range []string{googleCertsURL, firebaseCertsURL} {
+		if err := kc.fetchFromURL(url, newKeys); err != nil {
+			return err
 		}
-		pub, err := jwkToRSA(k)
-		if err != nil {
-			return fmt.Errorf("parsing key kid=%q: %w", k.Kid, err)
-		}
-		newKeys[k.Kid] = pub
 	}
 
 	kc.mu.Lock()
 	kc.keys = newKeys
 	kc.mu.Unlock()
 
+	return nil
+}
+
+// fetchFromURL fetches a JWKS from the given URL and merges keys into dest.
+func (kc *KeyCache) fetchFromURL(url string, dest map[string]*rsa.PublicKey) error {
+	resp, err := http.Get(url) //nolint:noctx
+	if err != nil {
+		return fmt.Errorf("GET %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("GET %s returned status %d", url, resp.StatusCode)
+	}
+
+	var set jwks
+	if err := json.NewDecoder(resp.Body).Decode(&set); err != nil {
+		return fmt.Errorf("decoding JWKS response from %s: %w", url, err)
+	}
+
+	for _, k := range set.Keys {
+		if k.Kty != "RSA" || k.Use != "sig" {
+			continue
+		}
+		pub, err := jwkToRSA(k)
+		if err != nil {
+			return fmt.Errorf("parsing key kid=%q from %s: %w", k.Kid, url, err)
+		}
+		dest[k.Kid] = pub
+	}
 	return nil
 }
 

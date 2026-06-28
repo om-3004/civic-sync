@@ -29,6 +29,11 @@ const List<String> _kCategories = [
   'Water Clogging',
   'Drain Overflow',
   'Electrical Hazard',
+  'Street Light Out',
+  'Garbage Dumping',
+  'Broken Road',
+  'Tree Fallen',
+  'Sewage Overflow',
   'Other',
 ];
 
@@ -577,7 +582,7 @@ class _CategoryDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      value: value,
       decoration: const InputDecoration(
         labelText: 'Category',
         border: OutlineInputBorder(),

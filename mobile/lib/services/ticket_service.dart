@@ -241,3 +241,74 @@ class TicketService {
     }
   }
 }
+
+/// Thrown when DELETE /tickets/:id returns a non-204 status or a network
+/// error occurs.
+class DeleteTicketException implements Exception {
+  final String message;
+  final int? statusCode;
+
+  const DeleteTicketException(this.message, {this.statusCode});
+
+  @override
+  String toString() => 'DeleteTicketException: $message';
+}
+
+extension TicketServiceDelete on TicketService {
+  /// Deletes the ticket with [ticketId] via DELETE /tickets/[ticketId].
+  ///
+  /// Returns normally on HTTP 204.
+  ///
+  /// Throws [DeleteTicketException] on:
+  ///   - HTTP 403: caller did not report this ticket.
+  ///   - HTTP 404: ticket not found.
+  ///   - HTTP 401: unauthenticated.
+  ///   - Network errors.
+  Future<void> deleteTicket(String ticketId) async {
+    try {
+      final String? idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+
+      final http.Response response = await http.delete(
+        Uri.parse('$_backendBaseUrl/tickets/$ticketId'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (idToken != null) 'Authorization': 'Bearer $idToken',
+        },
+      );
+
+      if (response.statusCode == 204) return;
+
+      if (response.statusCode == 403) {
+        throw const DeleteTicketException(
+          'You can only delete issues you reported.',
+          statusCode: 403,
+        );
+      } else if (response.statusCode == 404) {
+        throw const DeleteTicketException(
+          'Issue not found.',
+          statusCode: 404,
+        );
+      } else if (response.statusCode == 401) {
+        throw const DeleteTicketException(
+          'Your session has expired. Please sign in again.',
+          statusCode: 401,
+        );
+      } else {
+        throw DeleteTicketException(
+          'Failed to delete issue (error ${response.statusCode}). Please try again.',
+          statusCode: response.statusCode,
+        );
+      }
+    } on DeleteTicketException {
+      rethrow;
+    } on http.ClientException catch (e) {
+      throw DeleteTicketException(
+        'Network error while deleting: ${e.message}',
+      );
+    } catch (e) {
+      throw DeleteTicketException(
+        'An unexpected error occurred while deleting: $e',
+      );
+    }
+  }
+}

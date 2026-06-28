@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"strings"
@@ -56,6 +57,9 @@ func NewCreateTicketHandler(s store.Store) http.HandlerFunc {
 			http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
 			return
 		}
+
+		log.Printf("DEBUG createTicket: category=%q title=%q imageURL=%q lat=%v lng=%v",
+			req.Category, req.Title, req.ImageURL, req.Location.Latitude, req.Location.Longitude)
 
 		// --- 2. Validate required string fields ---
 		if req.Category == "" {
@@ -379,5 +383,74 @@ func NewUpdateTicketStatusHandler(s store.Store) http.HandlerFunc {
 			Status:    updated.Status,
 			UpdatedAt: updated.UpdatedAt,
 		})
+	}
+}
+
+// NewDeleteTicketHandler returns an http.HandlerFunc that handles
+// DELETE /tickets/{id}.
+//
+// Only the user who originally reported the ticket may delete it.
+//
+// Response codes:
+//   - 204: ticket deleted successfully
+//   - 401: unauthenticated (no UID in context)
+//   - 403: caller did not report this ticket
+//   - 404: ticket not found
+//   - 500: store error
+func NewDeleteTicketHandler(s store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		// --- 1. Extract ticket ID from URL path ---
+		ticketID := r.PathValue("id")
+		if ticketID == "" {
+			path := r.URL.Path
+			idx := strings.LastIndex(path, "/")
+			if idx >= 0 {
+				ticketID = path[idx+1:]
+			}
+		}
+		if ticketID == "" {
+			http.Error(w, `{"error":"missing ticket id"}`, http.StatusBadRequest)
+			return
+		}
+
+		// --- 2. Require authentication ---
+		uid := auth.UIDFromContext(ctx)
+		if uid == "" {
+			http.Error(w, `{"error":"unauthenticated"}`, http.StatusUnauthorized)
+			return
+		}
+
+		// --- 3. Fetch ticket; 404 if not found ---
+		ticket, err := s.GetTicket(ctx, ticketID)
+		if err != nil {
+			http.Error(w, `{"error":"failed to retrieve ticket"}`, http.StatusInternalServerError)
+			return
+		}
+		if ticket == nil {
+			http.Error(w, `{"error":"ticket not found"}`, http.StatusNotFound)
+			return
+		}
+
+		// --- 4. Verify ownership ---
+		if ticket.ReportedBy != uid {
+			http.Error(w, `{"error":"forbidden: you can only delete your own tickets"}`, http.StatusForbidden)
+			return
+		}
+
+		// --- 5. Enforce status constraint: only "To Do" tickets may be deleted ---
+		if ticket.Status != "To Do" {
+			http.Error(w, `{"error":"only tickets in 'To Do' status can be deleted"}`, http.StatusConflict)
+			return
+		}
+
+		// --- 6. Delete ---
+		if err := s.DeleteTicket(ctx, ticketID); err != nil {
+			http.Error(w, `{"error":"failed to delete ticket"}`, http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

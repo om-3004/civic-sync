@@ -178,6 +178,7 @@ func main() {
 				),
 			),
 		)
+		apiMux.Handle("DELETE /tickets/{id}", withAuth(tickets.NewDeleteTicketHandler(s)))
 
 		// ── 7. Start archival goroutine and open API traffic ───────────────────
 		tickets.StartArchivalScheduler(ctx, s)

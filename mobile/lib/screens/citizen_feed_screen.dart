@@ -14,9 +14,12 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'my_issues_screen.dart';
 import 'ticket_detail_screen.dart';
 
 // ── Ticket model (Dart-side, mirrors Firestore schema) ────────────────────────
@@ -121,14 +124,21 @@ class CitizenFeedScreen extends StatefulWidget {
 
 class _CitizenFeedScreenState extends State<CitizenFeedScreen>
     with SingleTickerProviderStateMixin {
-  // ── Tab controller (Map | List) ───────────────────────────────────────────
+  // ── Tab controller (Feed | Map | My Issues) ───────────────────────────────
 
   late final TabController _tabController;
 
   // ── Feed state ────────────────────────────────────────────────────────────
 
-  /// Filtered, client-side ticket list (updated on each Firestore snapshot).
-  List<Ticket> _tickets = [];
+  /// All tickets from Firestore (unfiltered).
+  List<Ticket> _allTickets = [];
+
+  /// Whether to show resolved (Done) tickets in addition to open ones.
+  bool _showResolved = false;
+
+  /// Tickets visible in the current view based on [_showResolved].
+  List<Ticket> get _tickets =>
+      _showResolved ? _allTickets : _allTickets.where((t) => t.status != 'Done').toList();
 
   /// Whether the initial load is still in progress.
   bool _isLoading = true;
@@ -149,7 +159,7 @@ class _CitizenFeedScreenState extends State<CitizenFeedScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _subscribeToFeed();
   }
 
@@ -196,7 +206,7 @@ class _CitizenFeedScreenState extends State<CitizenFeedScreen>
 
     if (mounted) {
       setState(() {
-        _tickets = tickets;
+        _allTickets = tickets;
         _isLoading = false;
         _errorMessage = null;
       });
@@ -236,6 +246,21 @@ class _CitizenFeedScreenState extends State<CitizenFeedScreen>
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          // Show resolved toggle
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Resolved', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              Switch(
+                value: _showResolved,
+                onChanged: (v) => setState(() => _showResolved = v),
+                activeColor: Colors.white,
+                activeTrackColor: Colors.white38,
+                inactiveThumbColor: Colors.white54,
+                inactiveTrackColor: Colors.white24,
+              ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
             tooltip: 'Report an issue',
@@ -253,8 +278,9 @@ class _CitizenFeedScreenState extends State<CitizenFeedScreen>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           tabs: const [
+            Tab(icon: Icon(Icons.list_outlined), text: 'Feed'),
             Tab(icon: Icon(Icons.map_outlined), text: 'Map'),
-            Tab(icon: Icon(Icons.list_outlined), text: 'List'),
+            Tab(icon: Icon(Icons.person_pin_outlined), text: 'My Issues'),
           ],
         ),
       ),
@@ -288,16 +314,18 @@ class _CitizenFeedScreenState extends State<CitizenFeedScreen>
     // Normal state: tab view with map and list.
     return TabBarView(
       controller: _tabController,
+      physics: const NeverScrollableScrollPhysics(),
       children: [
+        _ListView(
+          tickets: _tickets,
+          onTicketTap: _openTicketDetail,
+        ),
         _MapView(
           tickets: _tickets,
           onMarkerTap: _openTicketDetail,
           onMapCreated: (c) => _mapController = c,
         ),
-        _ListView(
-          tickets: _tickets,
-          onTicketTap: _openTicketDetail,
-        ),
+        const MyIssuesScreen(),
       ],
     );
   }
@@ -366,10 +394,37 @@ class _MapView extends StatefulWidget {
 }
 
 class _MapViewState extends State<_MapView> {
-  // ── Marker tap tracking ───────────────────────────────────────────────────
-
-  /// Map from MarkerId → Ticket for tap resolution.
   final Map<MarkerId, Ticket> _markerTicketMap = {};
+  LatLng? _userLocation;
+  GoogleMapController? _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserLocation();
+  }
+
+  Future<void> _fetchUserLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) return;
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+
+      if (!mounted) return;
+      final latLng = LatLng(position.latitude, position.longitude);
+      setState(() => _userLocation = latLng);
+      _controller?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 14));
+    } catch (_) {
+      // Permission denied or location unavailable — stay on default view.
+    }
+  }
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
@@ -412,31 +467,25 @@ class _MapViewState extends State<_MapView> {
 
   @override
   Widget build(BuildContext context) {
-    // Default camera position: centre of India (fallback when no tickets yet).
-    const CameraPosition defaultPosition = CameraPosition(
-      target: LatLng(20.5937, 78.9629),
-      zoom: 5,
-    );
-
-    // Compute camera position from first ticket if available.
-    CameraPosition initialPosition = defaultPosition;
-    if (widget.tickets.isNotEmpty) {
-      final first = widget.tickets.first;
-      if (first.latitude != 0.0 || first.longitude != 0.0) {
-        initialPosition = CameraPosition(
-          target: LatLng(first.latitude, first.longitude),
-          zoom: 13,
-        );
-      }
-    }
+    // Use user's location if available, otherwise centre of India.
+    final CameraPosition initialPosition = _userLocation != null
+        ? CameraPosition(target: _userLocation!, zoom: 14)
+        : const CameraPosition(target: LatLng(20.5937, 78.9629), zoom: 5);
 
     return GoogleMap(
       initialCameraPosition: initialPosition,
       markers: _buildMarkers(),
       myLocationButtonEnabled: true,
-      myLocationEnabled: false,
+      myLocationEnabled: true,
       mapToolbarEnabled: false,
-      onMapCreated: widget.onMapCreated,
+      onMapCreated: (c) {
+        _controller = c;
+        widget.onMapCreated(c);
+        // If location was already fetched before map was ready, move now.
+        if (_userLocation != null) {
+          c.animateCamera(CameraUpdate.newLatLngZoom(_userLocation!, 14));
+        }
+      },
     );
   }
 }
@@ -485,9 +534,9 @@ class _ListView extends StatelessWidget {
         await Future<void>.delayed(const Duration(milliseconds: 400));
       },
       child: ListView.separated(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
         itemCount: tickets.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 8),
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (_, index) {
           final ticket = tickets[index];
           return _TicketListCard(
@@ -502,8 +551,7 @@ class _ListView extends StatelessWidget {
 
 // ── Ticket list card ──────────────────────────────────────────────────────────
 
-/// Single list item for a ticket. Shows category, title, status badge, upvote
-/// count, and formatted creation date.
+/// Instagram-style card: full-width image on top, details below.
 class _TicketListCard extends StatelessWidget {
   final Ticket ticket;
   final VoidCallback onTap;
@@ -516,78 +564,139 @@ class _TicketListCard extends StatelessWidget {
 
     return Card(
       elevation: 2,
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header row: category chip + status badge ────────────────
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            // ── Image ────────────────────────────────────────────────────
+            if (ticket.imageUrl.isNotEmpty)
+              Stack(
                 children: [
+                  Image.network(
+                    ticket.imageUrl,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 200,
+                      color: const Color(0xFFF1F3F4),
+                      child: const Center(
+                        child: Icon(Icons.image_not_supported_outlined,
+                            size: 48, color: Color(0xFFDADCE0)),
+                      ),
+                    ),
+                    loadingBuilder: (_, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        height: 200,
+                        color: const Color(0xFFF1F3F4),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                              color: Color(0xFF1A73E8)),
+                        ),
+                      );
+                    },
+                  ),
+                  // Status badge overlaid on top-right of image
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: isResolved
+                        ? const _ResolvedBadge()
+                        : _StatusBadge(status: ticket.status),
+                  ),
+                ],
+              )
+            else
+              Container(
+                height: 160,
+                color: const Color(0xFFF1F3F4),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.image_outlined,
+                          size: 48, color: Color(0xFFDADCE0)),
+                      if (isResolved)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: _ResolvedBadge(),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: _StatusBadge(status: ticket.status),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // ── Details ──────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Category chip
                   _CategoryChip(category: ticket.category),
-                  const Spacer(),
-                  if (isResolved) const _ResolvedBadge(),
-                  if (!isResolved) _StatusBadge(status: ticket.status),
-                ],
-              ),
-              const SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-              // ── Title ───────────────────────────────────────────────────
-              Text(
-                ticket.title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF202124),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              if (ticket.description.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  ticket.description,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF5F6368),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-
-              const SizedBox(height: 10),
-
-              // ── Footer row: upvotes + date ──────────────────────────────
-              Row(
-                children: [
-                  const Icon(Icons.thumb_up_alt_outlined,
-                      size: 15, color: Color(0xFF5F6368)),
-                  const SizedBox(width: 4),
+                  // Title
                   Text(
-                    '${ticket.upvotes}',
+                    ticket.title,
                     style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF5F6368),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF202124),
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const Spacer(),
-                  Text(
-                    _formatDate(ticket.createdAt),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF9AA0A6),
+
+                  if (ticket.description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      ticket.description,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF5F6368),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                  ],
+
+                  const SizedBox(height: 10),
+
+                  // Footer: upvotes + date
+                  Row(
+                    children: [
+                      const Icon(Icons.thumb_up_alt_outlined,
+                          size: 15, color: Color(0xFF5F6368)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${ticket.upvotes}',
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFF5F6368)),
+                      ),
+                      const Spacer(),
+                      Text(
+                        _formatDate(ticket.createdAt),
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF9AA0A6)),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
