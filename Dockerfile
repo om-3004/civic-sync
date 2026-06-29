@@ -19,7 +19,9 @@ RUN CGO_ENABLED=0 GOARCH=amd64 GOOS=linux \
     -o /civic-sync-server ./cmd/server
 
 # ── Stage 2: Minimal runtime ──────────────────────────────────────────────────
-FROM scratch
+# distroless/static includes CA certificates (needed for HTTPS to Google APIs)
+# while remaining minimal — no shell, no package manager.
+FROM gcr.io/distroless/static:nonroot
 
 # Copy the static binary (web/static assets are embedded inside it)
 COPY --from=builder /civic-sync-server /civic-sync-server
