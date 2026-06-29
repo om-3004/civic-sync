@@ -52,5 +52,5 @@ jobs:
           gcloud builds submit \
             --project="${{ secrets.GCP_PROJECT_ID }}" \
             --config=cloudbuild.yaml \
-            --substitutions="_REGION=${{ secrets.GCP_REGION }}" \
+            --substitutions="_REGION=${{ secrets.GCP_REGION }},SHORT_SHA=${GITHUB_SHA::7}" \
             .
