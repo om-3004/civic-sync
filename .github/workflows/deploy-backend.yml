@@ -1,0 +1,56 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      # Only trigger when backend-relevant files change
+      - 'cmd/**'
+      - 'internal/**'
+      - 'web/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile'
+      - 'cloudbuild.yaml'
+
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy to Cloud Run
+    runs-on: ubuntu-latest
+
+    # Required for Workload Identity Federation token request
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Authenticate to Google Cloud via Workload Identity Federation ─
+      # No long-lived service account keys — uses OIDC token exchange instead.
+      # Requires one-time GCP setup (see repo README for instructions).
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      # ── 3. Set up gcloud CLI ─────────────────────────────────────────────
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # ── 4. Submit Cloud Build job ────────────────────────────────────────
+      # cloudbuild.yaml handles: docker build → push to Artifact Registry → deploy to Cloud Run
+      - name: Submit Cloud Build
+        run: |
+          gcloud builds submit \
+            --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --config=cloudbuild.yaml \
+            --substitutions="_REGION=${{ secrets.GCP_REGION }}" \
+            .
