@@ -65,8 +65,15 @@ jobs:
         run: flutter pub get
 
       # ── 6. Build release APK ─────────────────────────────────────────────
-      # Uses the debug signing config (build.gradle.kts signingConfigs.debug).
-      # For a Play Store release, swap to a proper keystore.
+      # Restores your local debug keystore so the SHA-1 matches what is
+      # registered in Firebase — required for Google Sign-In to work.
+      - name: Restore debug keystore
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p ~/.android
+          echo "$DEBUG_KEYSTORE_BASE64" | base64 --decode > ~/.android/debug.keystore
+
       - name: Build release APK
         working-directory: mobile
         run: flutter build apk --release --dart-define=BACKEND_URL=${{ secrets.BACKEND_URL }}
