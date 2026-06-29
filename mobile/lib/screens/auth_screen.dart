@@ -68,7 +68,7 @@ class _AuthScreenState extends State<AuthScreen> {
         if (mounted) {
           setState(() {
             _isLoading = false;
-            _errorMessage = 'Authentication failed. Please try again.';
+            _errorMessage = 'Authentication failed: ${e.code} ${e.message ?? ''}';
           });
         }
         return;
@@ -143,7 +143,7 @@ class _AuthScreenState extends State<AuthScreen> {
       // Network error or any unexpected exception.
       if (mounted) {
         setState(() {
-          _errorMessage = 'Sign-in failed: $e';
+          _errorMessage = 'Sign-in failed: ${e.runtimeType}: $e';
         });
       }
     } finally {
