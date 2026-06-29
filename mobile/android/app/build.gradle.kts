@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.civicsync.civic_sync"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

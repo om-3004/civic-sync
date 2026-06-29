@@ -47,6 +47,10 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     try {
+      // Force fresh sign-in by signing out of Firebase first.
+      // Do NOT sign out of GoogleSignIn here — it causes authenticate() to
+      // throw a canceled exception on some devices.
+      await FirebaseAuth.instance.signOut();
       // Step 1: Trigger the Google account picker.
       // GoogleSignIn 7.x uses a singleton with authenticate().
       // Throws GoogleSignInException on failure; the code field distinguishes
@@ -57,11 +61,13 @@ class _AuthScreenState extends State<AuthScreen> {
       } on GoogleSignInException catch (e) {
         // Req 1.2: User cancelled — silent return, no error shown.
         if (e.code == GoogleSignInExceptionCode.canceled) {
+          if (mounted) setState(() => _isLoading = false);
           return;
         }
         // Any other OAuth failure — show error and stay on sign-in screen.
         if (mounted) {
           setState(() {
+            _isLoading = false;
             _errorMessage = 'Authentication failed. Please try again.';
           });
         }
@@ -86,14 +92,26 @@ class _AuthScreenState extends State<AuthScreen> {
       final googleCredential = GoogleAuthProvider.credential(
         idToken: idToken,
       );
-      await FirebaseAuth.instance.signInWithCredential(googleCredential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(googleCredential);
 
-      // Step 3: POST to backend with the Google ID token.
+      // Step 3: Use the Firebase ID token (not the Google Sign-In token) so
+      // the UID stored in Firestore matches FirebaseAuth.instance.currentUser.uid.
+      final String? firebaseIdToken = await userCredential.user?.getIdToken();
+      if (firebaseIdToken == null) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Authentication failed. Please try again.';
+          });
+        }
+        return;
+      }
+
+      // POST to backend with the Firebase ID token.
       // Req 1.3: token is transmitted to backend before granting access.
       final http.Response response = await http.post(
         Uri.parse('$_backendBaseUrl/auth/login'),
         headers: {
-          'Authorization': 'Bearer $idToken',
+          'Authorization': 'Bearer $firebaseIdToken',
         },
       );
 
@@ -121,11 +139,11 @@ class _AuthScreenState extends State<AuthScreen> {
           _errorMessage = 'Sign-in failed. Please try again.';
         });
       }
-    } catch (_) {
+    } catch (e) {
       // Network error or any unexpected exception.
       if (mounted) {
         setState(() {
-          _errorMessage = 'Sign-in failed. Please try again.';
+          _errorMessage = 'Sign-in failed: $e';
         });
       }
     } finally {

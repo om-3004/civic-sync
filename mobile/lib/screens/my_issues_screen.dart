@@ -227,7 +227,12 @@ class _MyIssuesScreenState extends State<MyIssuesScreen> {
       color: const Color(0xFF1A73E8),
       onRefresh: () async => await Future<void>.delayed(const Duration(milliseconds: 300)),
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+        padding: EdgeInsets.fromLTRB(
+          0,
+          8,
+          0,
+          8 + MediaQuery.of(context).padding.bottom,
+        ),
         itemCount: _tickets.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (_, index) {

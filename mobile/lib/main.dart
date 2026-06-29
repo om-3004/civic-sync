@@ -28,13 +28,7 @@ Future<void> main() async {
   // Must be called before any plugin or async code.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialise Firebase using the configuration in google-services.json.
-  // TODO: Replace the default FirebaseOptions with the real values from your
-  //       Firebase project once google-services.json is configured.
   await Firebase.initializeApp();
-
-  // Initialise Google Sign-In singleton — required exactly once before any
-  // GoogleSignIn.instance method calls (google_sign_in 7.x breaking change).
   await GoogleSignIn.instance.initialize();
 
   runApp(const CivicSyncApp());

@@ -25,6 +25,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 
 import 'citizen_feed_screen.dart' show Ticket;
@@ -525,13 +526,7 @@ class _EmptyColumnHint extends StatelessWidget {
 
 // ── Official ticket card ──────────────────────────────────────────────────────
 
-/// Full-detail ticket card for the official dashboard (Req 8.3).
-///
-/// Displays: title, category, description, upvotes, status badge, location
-/// coordinates, submission timestamp, image thumbnail, reporter email.
-///
-/// Includes a status-advance button that calls PUT /tickets/:id/status (Req 8.4).
-class _OfficialTicketCard extends StatelessWidget {
+class _OfficialTicketCard extends StatefulWidget {
   final Ticket ticket;
   final bool isUpdating;
   final VoidCallback onAdvanceStatus;
@@ -542,10 +537,44 @@ class _OfficialTicketCard extends StatelessWidget {
     required this.onAdvanceStatus,
   });
 
-  String? get _nextStatus => _kNextStatus[ticket.status];
+  @override
+  State<_OfficialTicketCard> createState() => _OfficialTicketCardState();
+}
+
+class _OfficialTicketCardState extends State<_OfficialTicketCard> {
+  String? _areaName;
+
+  @override
+  void initState() {
+    super.initState();
+    _reverseGeocode();
+  }
+
+  Future<void> _reverseGeocode() async {
+    final lat = widget.ticket.latitude;
+    final lng = widget.ticket.longitude;
+    if (lat == 0.0 && lng == 0.0) return;
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty && mounted) {
+        final p = placemarks.first;
+        final parts = <String>[
+          if (p.subLocality?.isNotEmpty == true) p.subLocality!,
+          if (p.locality?.isNotEmpty == true) p.locality!,
+          if (p.administrativeArea?.isNotEmpty == true) p.administrativeArea!,
+        ];
+        setState(() => _areaName = parts.isNotEmpty ? parts.join(', ') : null);
+      }
+    } catch (_) {
+      // Geocoding failed — fall back to coordinates.
+    }
+  }
+
+  String? get _nextStatus => _kNextStatus[widget.ticket.status];
 
   @override
   Widget build(BuildContext context) {
+    final ticket = widget.ticket;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -607,7 +636,8 @@ class _OfficialTicketCard extends StatelessWidget {
             const SizedBox(height: 4),
             _MetaRow(
               icon: Icons.location_on_outlined,
-              label: '${ticket.latitude.toStringAsFixed(5)}, '
+              label: _areaName ??
+                  '${ticket.latitude.toStringAsFixed(5)}, '
                   '${ticket.longitude.toStringAsFixed(5)}',
             ),
             const SizedBox(height: 4),
@@ -616,12 +646,14 @@ class _OfficialTicketCard extends StatelessWidget {
               label: _formatDateTime(ticket.createdAt),
             ),
             const SizedBox(height: 4),
-            // Reporter email (Req 8.3)
+            // Reporter (Req 8.3)
             _MetaRow(
               icon: Icons.person_outline,
-              label: ticket.reportedBy.isNotEmpty
-                  ? ticket.reportedBy
-                  : 'Unknown reporter',
+              label: ticket.reportedByName.isNotEmpty
+                  ? ticket.reportedByName
+                  : ticket.reportedByEmail.isNotEmpty
+                      ? ticket.reportedByEmail
+                      : 'Unknown reporter',
             ),
 
             const SizedBox(height: 10),
@@ -630,7 +662,7 @@ class _OfficialTicketCard extends StatelessWidget {
             if (_nextStatus != null)
               SizedBox(
                 width: double.infinity,
-                child: isUpdating
+                child: widget.isUpdating
                     ? const Center(
                         child: Padding(
                           padding: EdgeInsets.symmetric(vertical: 6),
@@ -645,7 +677,7 @@ class _OfficialTicketCard extends StatelessWidget {
                         ),
                       )
                     : ElevatedButton.icon(
-                        onPressed: onAdvanceStatus,
+                        onPressed: widget.onAdvanceStatus,
                         icon: const Icon(Icons.arrow_forward, size: 16),
                         label: Text(
                           'Move to "$_nextStatus"',

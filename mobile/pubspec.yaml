@@ -25,6 +25,7 @@ dependencies:
   # camera-only; gallery access is disabled at the widget level (Req 2.1, 2.3)
   image_picker: 1.2.2
   geolocator: 14.0.3          # GPS coordinate acquisition ≤50 m accuracy (Req 2.4)
+  geocoding: 4.0.0            # Reverse geocoding for human-readable location names
 
   # ── Map ──────────────────────────────────────────────────────────────────
   google_maps_flutter: 2.17.1 # Map view with ticket location markers (Req 7.1)

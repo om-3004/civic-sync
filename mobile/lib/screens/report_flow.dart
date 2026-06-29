@@ -13,6 +13,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -63,6 +64,9 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
 
   /// Non-null when GPS acquisition has failed (permission denied or timeout).
   String? _locationError;
+
+  /// Human-readable area name from reverse geocoding.
+  String? _areaName;
 
   /// True while upload and/or triage is in progress.
   bool _isUploading = false;
@@ -239,6 +243,8 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
           _isLocating = false;
         });
       }
+      // Reverse geocode in background — no-op if it fails.
+      _reverseGeocode(position.latitude, position.longitude);
     } on LocationServiceDisabledException {
       if (mounted) {
         setState(() {
@@ -265,6 +271,27 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
               'Please move to an open area and try again.';
         });
       }
+    }
+  }
+
+  // ── Reverse geocoding ─────────────────────────────────────────────────────
+
+  Future<void> _reverseGeocode(double lat, double lng) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty && mounted) {
+        final p = placemarks.first;
+        final parts = <String>[
+          if (p.subLocality?.isNotEmpty == true) p.subLocality!,
+          if (p.locality?.isNotEmpty == true) p.locality!,
+          if (p.administrativeArea?.isNotEmpty == true) p.administrativeArea!,
+        ];
+        if (parts.isNotEmpty) {
+          setState(() => _areaName = parts.join(', '));
+        }
+      }
+    } catch (_) {
+      // Geocoding failed — keep showing coordinates.
     }
   }
 
@@ -440,6 +467,7 @@ class _ReportFlowScreenState extends State<ReportFlowScreen> {
                 isLocating: _isLocating,
                 location: _location,
                 locationError: _locationError,
+                areaName: _areaName,
                 onRetry: _capturedImage != null ? _acquireGps : null,
               ),
 
@@ -772,12 +800,14 @@ class _GpsStatusCard extends StatelessWidget {
   final bool isLocating;
   final Position? location;
   final String? locationError;
+  final String? areaName;
   final VoidCallback? onRetry;
 
   const _GpsStatusCard({
     required this.isLocating,
     required this.location,
     required this.locationError,
+    this.areaName,
     required this.onRetry,
   });
 
@@ -800,9 +830,11 @@ class _GpsStatusCard extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Acquiring GPS coordinates…',
-                    style: TextStyle(fontSize: 14),
+                  const Expanded(
+                    child: Text(
+                      'Acquiring GPS coordinates…',
+                      style: TextStyle(fontSize: 14),
+                    ),
                   ),
                 ],
               ),
@@ -826,15 +858,19 @@ class _GpsStatusCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              _CoordinateRow(
-                label: 'Latitude',
-                value: location!.latitude.toStringAsFixed(6),
-              ),
-              const SizedBox(height: 4),
-              _CoordinateRow(
-                label: 'Longitude',
-                value: location!.longitude.toStringAsFixed(6),
-              ),
+              if (areaName != null)
+                _CoordinateRow(label: 'Location', value: areaName!)
+              else ...[
+                _CoordinateRow(
+                  label: 'Latitude',
+                  value: location!.latitude.toStringAsFixed(6),
+                ),
+                const SizedBox(height: 4),
+                _CoordinateRow(
+                  label: 'Longitude',
+                  value: location!.longitude.toStringAsFixed(6),
+                ),
+              ],
               const SizedBox(height: 4),
               _CoordinateRow(
                 label: 'Accuracy',
@@ -859,11 +895,13 @@ class _GpsStatusCard extends StatelessWidget {
                   Icon(Icons.location_off,
                       color: Colors.grey.shade400, size: 20),
                   const SizedBox(width: 8),
-                  Text(
-                    'GPS will be acquired after the photo is taken.',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 13,
+                  Expanded(
+                    child: Text(
+                      'GPS will be acquired after the photo is taken.',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -886,23 +924,25 @@ class _CoordinateRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF5F6368),
-            ),
-          ),
-        ),
         Text(
-          value,
+          '$label  ',
           style: const TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF202124),
+            color: Color(0xFF5F6368),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF202124),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

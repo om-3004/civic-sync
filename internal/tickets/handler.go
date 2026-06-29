@@ -94,9 +94,11 @@ func NewCreateTicketHandler(s store.Store) http.HandlerFunc {
 
 		// --- 4. Extract authenticated caller's UID ---
 		uid := auth.UIDFromContext(ctx)
+		email := auth.EmailFromContext(ctx)
+		name := auth.NameFromContext(ctx)
 
 		// --- 5. Duplicate detection (Req 4.1, 4.2, 4.5) ---
-		duplicate, err := FindDuplicate(ctx, s, req.Category, lat, lng)
+		duplicate, err := FindDuplicate(ctx, s, req.Category, lat, lng, req.Title, req.Description)
 		if err != nil {
 			http.Error(w, `{"error":"failed to check for duplicate tickets"}`, http.StatusInternalServerError)
 			return
@@ -116,19 +118,21 @@ func NewCreateTicketHandler(s store.Store) http.HandlerFunc {
 		// --- 6b. No duplicate → create a new ticket (Req 4.4) ---
 		now := time.Now().UTC()
 		ticket := &models.Ticket{
-			ID:          newUUID(),
-			Category:    req.Category,
-			Title:       req.Title,
-			Description: req.Description,
-			ImageURL:    req.ImageURL,
-			Location:    req.Location,
-			Status:      "To Do",
-			Upvotes:     0,
-			UpvotedBy:   []string{},
-			ReportedBy:  uid,
-			CreatedAt:   now,
-			UpdatedAt:   now,
-			ResolvedAt:  nil,
+			ID:              newUUID(),
+			Category:        req.Category,
+			Title:           req.Title,
+			Description:     req.Description,
+			ImageURL:        req.ImageURL,
+			Location:        req.Location,
+			Status:          "To Do",
+			Upvotes:         0,
+			UpvotedBy:       []string{},
+			ReportedBy:      uid,
+			ReportedByName:  name,
+			ReportedByEmail: email,
+			CreatedAt:       now,
+			UpdatedAt:       now,
+			ResolvedAt:      nil,
 		}
 
 		if err := s.CreateTicket(ctx, ticket); err != nil {
@@ -204,6 +208,12 @@ func NewUpvoteTicketHandler(s store.Store) http.HandlerFunc {
 		// --- 4. Reject archived tickets with 409 (Req 9.4) ---
 		if ticket.Status == "Archived" {
 			http.Error(w, `{"error":"ticket is archived"}`, http.StatusConflict)
+			return
+		}
+
+		// --- 5. Reject self-upvote with 409 ---
+		if ticket.ReportedBy == uid {
+			http.Error(w, `{"error":"cannot upvote your own ticket"}`, http.StatusConflict)
 			return
 		}
 

@@ -36,6 +36,8 @@ class Ticket {
   final String status;
   final int upvotes;
   final String reportedBy;
+  final String reportedByName;
+  final String reportedByEmail;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? resolvedAt;
@@ -51,6 +53,8 @@ class Ticket {
     required this.status,
     required this.upvotes,
     required this.reportedBy,
+    this.reportedByName = '',
+    this.reportedByEmail = '',
     required this.createdAt,
     required this.updatedAt,
     this.resolvedAt,
@@ -74,6 +78,8 @@ class Ticket {
       status: (data['status'] as String?) ?? 'To Do',
       upvotes: (data['upvotes'] as int?) ?? 0,
       reportedBy: (data['reported_by'] as String?) ?? '',
+      reportedByName: (data['reported_by_name'] as String?) ?? '',
+      reportedByEmail: (data['reported_by_email'] as String?) ?? '',
       createdAt: _toDateTime(data['created_at']),
       updatedAt: _toDateTime(data['updated_at']),
       resolvedAt: data['resolved_at'] != null
@@ -241,26 +247,16 @@ class _CitizenFeedScreenState extends State<CitizenFeedScreen>
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('CivicSync Feed'),
+        title: const Text('CivicSync'),
         backgroundColor: const Color(0xFF1A73E8),
         foregroundColor: Colors.white,
         elevation: 0,
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
         actions: [
-          // Show resolved toggle
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Resolved', style: TextStyle(color: Colors.white70, fontSize: 12)),
-              Switch(
-                value: _showResolved,
-                onChanged: (v) => setState(() => _showResolved = v),
-                activeColor: Colors.white,
-                activeTrackColor: Colors.white38,
-                inactiveThumbColor: Colors.white54,
-                inactiveTrackColor: Colors.white24,
-              ),
-            ],
-          ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
             tooltip: 'Report an issue',
@@ -272,16 +268,55 @@ class _CitizenFeedScreenState extends State<CitizenFeedScreen>
             onPressed: () => Navigator.pushNamed(context, '/profile'),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(icon: Icon(Icons.list_outlined), text: 'Feed'),
-            Tab(icon: Icon(Icons.map_outlined), text: 'Map'),
-            Tab(icon: Icon(Icons.person_pin_outlined), text: 'My Issues'),
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(72),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 4, 0),
+                child: Row(
+                  children: [
+                    const Text('Show Resolved',
+                        style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    Transform.scale(
+                      scale: 0.75,
+                      child: Switch(
+                        value: _showResolved,
+                        onChanged: (v) => setState(() => _showResolved = v),
+                        activeColor: Colors.white,
+                        activeTrackColor: Colors.green,
+                        inactiveThumbColor: Colors.white,
+                        inactiveTrackColor: Colors.white24,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      _showResolved ? '✓ All issues' : 'Open only',
+                      style: TextStyle(
+                        color: _showResolved ? Colors.greenAccent : Colors.white54,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TabBar(
+                controller: _tabController,
+                indicatorColor: Colors.white,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white70,
+                labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                unselectedLabelStyle: const TextStyle(fontSize: 12),
+                tabs: const [
+                  Tab(text: 'Feed'),
+                  Tab(text: 'Map'),
+                  Tab(text: 'My Issues'),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
       body: _buildBody(),
@@ -534,7 +569,12 @@ class _ListView extends StatelessWidget {
         await Future<void>.delayed(const Duration(milliseconds: 400));
       },
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+        padding: EdgeInsets.fromLTRB(
+          0,
+          8,
+          0,
+          8 + MediaQuery.of(context).padding.bottom,
+        ),
         itemCount: tickets.length,
         separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (_, index) {

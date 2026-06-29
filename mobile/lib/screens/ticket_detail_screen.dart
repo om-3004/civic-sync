@@ -8,7 +8,9 @@
 //
 // Requirements: 7.3, 5.1, 5.3
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../services/ticket_service.dart';
@@ -162,13 +164,22 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   ],
 
                   // ── Upvote card ───────────────────────────────────────────
-                  _UpvoteCard(
-                    upvotes: _upvotes,
-                    isUpvoting: _isUpvoting,
-                    message: _upvoteMessage,
-                    isSuccess: _upvoteSuccess,
-                    onUpvote: _upvote,
-                  ),
+                  if (widget.ticket.reportedBy != FirebaseAuth.instance.currentUser?.uid)
+                    _UpvoteCard(
+                      upvotes: _upvotes,
+                      isUpvoting: _isUpvoting,
+                      message: _upvoteMessage,
+                      isSuccess: _upvoteSuccess,
+                      onUpvote: _upvote,
+                    )
+                  else
+                    _UpvoteCard(
+                      upvotes: _upvotes,
+                      isUpvoting: false,
+                      message: null,
+                      isSuccess: false,
+                      onUpvote: null,
+                    ),
 
                   const SizedBox(height: 16),
 
@@ -241,7 +252,7 @@ class _UpvoteCard extends StatelessWidget {
   final bool isUpvoting;
   final String? message;
   final bool isSuccess;
-  final VoidCallback onUpvote;
+  final VoidCallback? onUpvote;
 
   const _UpvoteCard({
     required this.upvotes,
@@ -287,6 +298,22 @@ class _UpvoteCard extends StatelessWidget {
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: Color(0xFF1A73E8),
+                    ),
+                  )
+                else if (onUpvote == null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F0FE),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Your issue',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF1A73E8),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   )
                 else
@@ -358,13 +385,45 @@ class _UpvoteCard extends StatelessWidget {
 }
 
 /// Read-only metadata card showing all ticket timestamps and reporter info.
-class _MetadataCard extends StatelessWidget {
+class _MetadataCard extends StatefulWidget {
   final Ticket ticket;
 
   const _MetadataCard({required this.ticket});
 
   @override
+  State<_MetadataCard> createState() => _MetadataCardState();
+}
+
+class _MetadataCardState extends State<_MetadataCard> {
+  String? _areaName;
+
+  @override
+  void initState() {
+    super.initState();
+    _reverseGeocode();
+  }
+
+  Future<void> _reverseGeocode() async {
+    final lat = widget.ticket.latitude;
+    final lng = widget.ticket.longitude;
+    if (lat == 0.0 && lng == 0.0) return;
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty && mounted) {
+        final p = placemarks.first;
+        final parts = <String>[
+          if (p.subLocality?.isNotEmpty == true) p.subLocality!,
+          if (p.locality?.isNotEmpty == true) p.locality!,
+          if (p.administrativeArea?.isNotEmpty == true) p.administrativeArea!,
+        ];
+        setState(() => _areaName = parts.isNotEmpty ? parts.join(', ') : null);
+      }
+    } catch (_) {}
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final ticket = widget.ticket;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -402,9 +461,10 @@ class _MetadataCard extends StatelessWidget {
             _MetaRow(label: 'Status', value: ticket.status),
             const SizedBox(height: 6),
             _MetaRow(
-              label: 'Coordinates',
-              value:
-                  '${ticket.latitude.toStringAsFixed(5)}, ${ticket.longitude.toStringAsFixed(5)}',
+              label: 'Location',
+              value: _areaName ??
+                  '${ticket.latitude.toStringAsFixed(5)}, '
+                  '${ticket.longitude.toStringAsFixed(5)}',
             ),
           ],
         ),

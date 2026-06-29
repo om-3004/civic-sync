@@ -71,7 +71,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _navigatingToOfficial = true;
           Future.delayed(const Duration(seconds: 1), () {
             if (mounted) {
-              Navigator.pushReplacementNamed(context, '/official-dash');
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/official-dash',
+                (route) => false,
+              );
             }
           });
         }
@@ -116,9 +120,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Upgrade successful! Redirecting to the Official Dashboard…'),
-            duration: Duration(seconds: 3),
+            duration: Duration(seconds: 2),
           ),
         );
+        // Navigate immediately instead of waiting for Firestore listener.
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/official-dash',
+            (route) => false,
+          );
+        }
       case _PinResult.rateLimited:
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
