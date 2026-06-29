@@ -10,6 +10,9 @@ jobs:
     name: Build & Release Android APK
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write  # required to create GitHub Releases and upload assets
+
     steps:
       # ── 1. Checkout ──────────────────────────────────────────────────────
       - name: Checkout repository
@@ -47,11 +50,6 @@ jobs:
         run: echo "$LOCAL_PROPERTIES" > mobile/android/local.properties
 
       # ── 5. Install Flutter dependencies ─────────────────────────────────
-      - name: Flutter pub get
-        working-directory: mobile
-        run: flutter pub get
-
-      # ── 5a. Cache Gradle dependencies ────────────────────────────────────
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
@@ -61,6 +59,10 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('mobile/android/**/*.gradle*', 'mobile/android/**/*.kts') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
+
+      - name: Flutter pub get
+        working-directory: mobile
+        run: flutter pub get
 
       # ── 6. Build release APK ─────────────────────────────────────────────
       # Uses the debug signing config (build.gradle.kts signingConfigs.debug).
