@@ -48,9 +48,11 @@ jobs:
       # ── 4. Submit Cloud Build job ────────────────────────────────────────
       # cloudbuild.yaml handles: docker build → push to Artifact Registry → deploy to Cloud Run
       - name: Submit Cloud Build
+        env:
+          SHORT_SHA: ${{ github.sha }}
         run: |
           gcloud builds submit \
             --project="${{ secrets.GCP_PROJECT_ID }}" \
             --config=cloudbuild.yaml \
-            --substitutions="_REGION=${{ secrets.GCP_REGION }},SHORT_SHA=${GITHUB_SHA::7}" \
+            --substitutions="_REGION=${{ secrets.GCP_REGION }},SHORT_SHA=${SHORT_SHA:0:7}" \
             .
