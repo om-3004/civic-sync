@@ -68,7 +68,7 @@ class _AuthScreenState extends State<AuthScreen> {
         if (mounted) {
           setState(() {
             _isLoading = false;
-            _errorMessage = 'Authentication failed: ${e.code} ${e.message ?? ''}';
+            _errorMessage = 'Authentication failed: ${e.code}';
           });
         }
         return;
