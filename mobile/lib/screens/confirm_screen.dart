@@ -16,6 +16,7 @@
 
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
@@ -149,8 +150,42 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
       if (!mounted) return;
 
       if (result.isDuplicate) {
-        // Req 4.3: duplicate found — prompt to upvote.
-        await _showDuplicateDialog(result.ticket);
+        // Check if the duplicate was reported by the current user.
+        final String? currentUid = FirebaseAuth.instance.currentUser?.uid;
+        final String reportedBy = (result.ticket['reported_by'] as String?) ?? '';
+
+        if (reportedBy.isNotEmpty && reportedBy == currentUid) {
+          // User is trying to re-report their own issue — show a dialog.
+          if (!mounted) return;
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              icon: const Icon(Icons.info_outline, color: Color(0xFF1A73E8), size: 40),
+              title: const Text('Already Reported'),
+              content: const Text(
+                'You have already reported this issue. It has been logged and is being tracked.',
+                textAlign: TextAlign.center,
+              ),
+              actionsAlignment: MainAxisAlignment.center,
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1A73E8),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(120, 44),
+                  ),
+                  child: const Text('Okay'),
+                ),
+              ],
+            ),
+          );
+          if (mounted) _navigateToFeed();
+        } else {
+          // Req 4.3: duplicate from another user — prompt to upvote.
+          await _showDuplicateDialog(result.ticket);
+        }
       } else {
         // HTTP 201: new ticket created successfully.
         _navigateToFeedWithSuccess('Issue reported successfully!');
