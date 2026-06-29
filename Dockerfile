@@ -1,6 +1,9 @@
 # ── Stage 1: Build ────────────────────────────────────────────────────────────
 FROM golang:1.24-alpine AS builder
 
+# Allow the Go toolchain to auto-download the version required by go.mod
+ENV GOTOOLCHAIN=auto
+
 WORKDIR /app
 
 # Download dependencies first (layer-cached unless go.mod/go.sum change)
