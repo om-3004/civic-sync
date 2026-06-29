@@ -37,15 +37,30 @@ jobs:
       #   LOCAL_PROPERTIES      — full content of mobile/android/local.properties
       #                           (must include MAPS_API_KEY=<your-key>)
       - name: Write google-services.json
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > mobile/android/app/google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" > mobile/android/app/google-services.json
 
       - name: Write local.properties
-        run: echo "${{ secrets.LOCAL_PROPERTIES }}" > mobile/android/local.properties
+        env:
+          LOCAL_PROPERTIES: ${{ secrets.LOCAL_PROPERTIES }}
+        run: echo "$LOCAL_PROPERTIES" > mobile/android/local.properties
 
       # ── 5. Install Flutter dependencies ─────────────────────────────────
       - name: Flutter pub get
         working-directory: mobile
         run: flutter pub get
+
+      # ── 5a. Cache Gradle dependencies ────────────────────────────────────
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('mobile/android/**/*.gradle*', 'mobile/android/**/*.kts') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       # ── 6. Build release APK ─────────────────────────────────────────────
       # Uses the debug signing config (build.gradle.kts signingConfigs.debug).
