@@ -55,8 +55,8 @@ steps:
       - --port=8080
       - --min-instances=0
       - --max-instances=10
-      # PROJECT_ID is safe to pass as a plain env var (not a secret)
-      - --set-env-vars=PROJECT_ID=$PROJECT_ID
+      # PROJECT_ID and GOOGLE_CLIENT_ID are safe to pass as plain env vars
+      - --set-env-vars=PROJECT_ID=$PROJECT_ID,GOOGLE_CLIENT_ID=1081327470327-dnaj2s6l1s6eeej1tg0p8moedigvirtu.apps.googleusercontent.com
       # GEMINI_API_KEY and MASTER_PIN are read from Secret Manager at runtime
       - --set-secrets=GEMINI_API_KEY=gemini-api-key:latest,MASTER_PIN=master-pin:latest
 
