@@ -79,12 +79,12 @@ jobs:
         run: flutter build apk --release --dart-define=BACKEND_URL=${{ secrets.BACKEND_URL }}
 
       # ── 7. Print APK signing certificate SHA-1 ──────────────────────────
-      # Used to verify the SHA-1 registered in Firebase matches the built APK.
       - name: Print APK SHA-1
         run: |
-          keytool -printcert -jarfile \
+          $ANDROID_SDK_ROOT/build-tools/$(ls $ANDROID_SDK_ROOT/build-tools | tail -1)/apksigner verify \
+            --print-certs \
             mobile/build/app/outputs/flutter-apk/app-release.apk \
-            | grep -A1 "SHA1:"
+            | grep "SHA-1"
 
       # ── 8. Create both a versioned and a fixed-name latest APK ──────────
       # civic-sync-latest.apk is what the landing page download button links to.
