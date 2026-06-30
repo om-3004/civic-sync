@@ -54,15 +54,11 @@ class _AuthScreenState extends State<AuthScreen> {
       try {
         account = await GoogleSignIn.instance.authenticate();
       } on GoogleSignInException catch (e) {
-        if (e.code == GoogleSignInExceptionCode.canceled) {
-          if (mounted) setState(() { _isLoading = false; _debugStep = ''; });
-          return;
-        }
         if (mounted) {
           setState(() {
             _isLoading = false;
             _debugStep = '';
-            _errorMessage = 'Authentication failed: ${e.code}';
+            _errorMessage = 'GoogleSignIn error: code=${e.code}';
           });
         }
         return;
