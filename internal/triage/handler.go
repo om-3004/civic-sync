@@ -3,6 +3,7 @@ package triage
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -80,6 +81,7 @@ func (h *Handler) TriageHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// ErrAPIFailure or any other agent error → 422.
+		log.Printf("triage agent error: %v", err)
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "AI classification failed"})
 		return
 	}
@@ -87,6 +89,7 @@ func (h *Handler) TriageHandler(w http.ResponseWriter, r *http.Request) {
 	// ── 5. Parse and validate the Gemini response ─────────────────────────────
 	result, err := parseGeminiResponse(raw)
 	if err != nil {
+		log.Printf("triage parse error: %v | raw: %s", err, raw)
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "AI response could not be parsed"})
 		return
 	}
