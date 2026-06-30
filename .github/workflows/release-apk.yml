@@ -73,6 +73,12 @@ jobs:
         run: |
           mkdir -p ~/.android
           echo "$DEBUG_KEYSTORE_BASE64" | base64 --decode > ~/.android/debug.keystore
+          # Verify the restored keystore SHA-1 matches what's registered in Firebase
+          keytool -list -v \
+            -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey \
+            -storepass android \
+            -keypass android 2>/dev/null | grep "SHA1:"
 
       - name: Build release APK
         working-directory: mobile
