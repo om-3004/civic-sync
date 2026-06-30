@@ -37,6 +37,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   bool _isLoading = false;
   String? _errorMessage;
+  String _debugStep = ''; // temporary debug indicator
 
   /// Executes the full sign-in flow:
   ///   Google OAuth → ID token → POST /auth/login → role-based navigation.
@@ -47,96 +48,68 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     try {
-      // Force fresh sign-in by signing out of Firebase first.
-      // Do NOT sign out of GoogleSignIn here — it causes authenticate() to
-      // throw a canceled exception on some devices.
-      await FirebaseAuth.instance.signOut();
+      setState(() => _debugStep = 'step1: authenticating...');
       // Step 1: Trigger the Google account picker.
-      // GoogleSignIn 7.x uses a singleton with authenticate().
-      // Throws GoogleSignInException on failure; the code field distinguishes
-      // cancellation from other errors.
       late final GoogleSignInAccount account;
       try {
         account = await GoogleSignIn.instance.authenticate();
       } on GoogleSignInException catch (e) {
-        // Req 1.2: User cancelled — silent return, no error shown.
         if (e.code == GoogleSignInExceptionCode.canceled) {
-          if (mounted) setState(() => _isLoading = false);
+          if (mounted) setState(() { _isLoading = false; _debugStep = ''; });
           return;
         }
-        // Any other OAuth failure — show error and stay on sign-in screen.
         if (mounted) {
           setState(() {
             _isLoading = false;
+            _debugStep = '';
             _errorMessage = 'Authentication failed: ${e.code}';
           });
         }
         return;
       }
 
-      // Step 2: Extract the ID token from the signed-in account.
-      // authentication is a synchronous getter in google_sign_in 7.x.
+      if (mounted) setState(() => _debugStep = 'step2: extracting idToken...');
       final String? idToken = account.authentication.idToken;
 
       if (idToken == null) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Authentication failed. Please try again.';
-          });
-        }
+        if (mounted) setState(() { _errorMessage = 'Sign-in failed: idToken was null.'; _debugStep = ''; });
         return;
       }
 
-      // Step 2b: Sign into Firebase Auth with the Google credential so that
-      // Firestore security rules (request.auth != null) are satisfied.
-      final googleCredential = GoogleAuthProvider.credential(
-        idToken: idToken,
-      );
+      if (mounted) setState(() => _debugStep = 'step3: signing into Firebase...');
+      final googleCredential = GoogleAuthProvider.credential(idToken: idToken);
       final userCredential = await FirebaseAuth.instance.signInWithCredential(googleCredential);
 
-      // Step 3: Use the Firebase ID token (not the Google Sign-In token) so
-      // the UID stored in Firestore matches FirebaseAuth.instance.currentUser.uid.
+      if (mounted) setState(() => _debugStep = 'step4: getting Firebase token...');
       final String? firebaseIdToken = await userCredential.user?.getIdToken();
       if (firebaseIdToken == null) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Authentication failed. Please try again.';
-          });
-        }
+        if (mounted) setState(() { _errorMessage = 'Sign-in failed: firebaseIdToken was null.'; _debugStep = ''; });
         return;
       }
 
-      // POST to backend with the Firebase ID token.
-      // Req 1.3: token is transmitted to backend before granting access.
+      if (mounted) setState(() => _debugStep = 'step5: calling backend $_backendBaseUrl ...');
       final http.Response response = await http.post(
         Uri.parse('$_backendBaseUrl/auth/login'),
-        headers: {
-          'Authorization': 'Bearer $firebaseIdToken',
-        },
+        headers: {'Authorization': 'Bearer $firebaseIdToken'},
       );
+
+      if (mounted) setState(() => _debugStep = 'step6: got ${response.statusCode}');
 
       if (!mounted) return;
 
       if (response.statusCode == 200) {
-        // Step 4: Parse role and navigate accordingly.
-        final Map<String, dynamic> body =
-            jsonDecode(response.body) as Map<String, dynamic>;
+        setState(() => _debugStep = '');
+        final Map<String, dynamic> body = jsonDecode(response.body) as Map<String, dynamic>;
         final String role = (body['role'] as String?) ?? 'citizen';
-
         if (role == 'official') {
           Navigator.pushReplacementNamed(context, '/official-dash');
         } else {
           Navigator.pushReplacementNamed(context, '/citizen-feed');
         }
-      } else if (response.statusCode == 401) {
-        // Req 1.2: Backend rejected the token — show error, stay on sign-in.
-        setState(() {
-          _errorMessage =
-              'Sign-in failed: invalid or expired credentials.';
-        });
       } else {
         setState(() {
-          _errorMessage = 'Sign-in failed. Please try again.';
+          _debugStep = '';
+          _errorMessage = 'Backend error ${response.statusCode}: ${response.body}';
         });
       }
     } catch (e) {
@@ -213,10 +186,15 @@ class _AuthScreenState extends State<AuthScreen> {
                   Text(
                     _errorMessage!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(color: Colors.red, fontSize: 14),
+                  ),
+                ],
+                if (_debugStep.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _debugStep,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
               ],
