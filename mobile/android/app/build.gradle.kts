@@ -2,9 +2,7 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    // Google Services plugin processes google-services.json for Firebase initialization
     id("com.google.gms.google-services")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -20,23 +18,35 @@ android {
 
     defaultConfig {
         applicationId = "com.civicsync.civic_sync"
-        // Firebase requires minSdk >= 21; geolocator requires >= 21
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // Read Maps API key from local.properties (never committed to git)
         val localProps = Properties()
         val localPropsFile = rootProject.file("local.properties")
         if (localPropsFile.exists()) localProps.load(localPropsFile.inputStream())
         manifestPlaceholders["MAPS_API_KEY"] = localProps.getProperty("MAPS_API_KEY", "")
     }
 
+    signingConfigs {
+        create("release") {
+            val ksFile = rootProject.file("release.jks")
+            if (ksFile.exists()) {
+                storeFile = ksFile
+                storePassword = "civic-sync-2026"
+                keyAlias = "civic-sync"
+                keyPassword = "civic-sync-2026"
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Replace with a proper signing config before publishing to the Play Store.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (rootProject.file("release.jks").exists())
+                signingConfigs.getByName("release")
+            else
+                signingConfigs.getByName("debug")
         }
     }
 }

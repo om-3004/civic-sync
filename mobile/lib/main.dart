@@ -29,12 +29,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp();
-  await GoogleSignIn.instance.initialize(
-    // Web client ID (OAuth 2.0 type 3) from google-services.json.
-    // Required by google_sign_in 7.x on Android to obtain an ID token.
-    // This is a public identifier — not a secret.
-    serverClientId: '1081327470327-dnaj2s6l1s6eeej1tg0p8moedigvirtu.apps.googleusercontent.com',
-  );
+  // google_sign_in 6.x does not require explicit initialization.
 
   runApp(const CivicSyncApp());
 }

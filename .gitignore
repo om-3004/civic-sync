@@ -42,6 +42,7 @@ mobile/.flutter-plugins
 mobile/.flutter-plugins-dependencies
 mobile/.pub-cache/
 mobile/android/local.properties
+mobile/android/release.jks
 mobile/android/.gradle/
 
 # IDE & editor

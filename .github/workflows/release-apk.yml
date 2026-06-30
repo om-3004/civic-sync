@@ -65,20 +65,11 @@ jobs:
         run: flutter pub get
 
       # ── 6. Build release APK ─────────────────────────────────────────────
-      # Restores your local debug keystore so the SHA-1 matches what is
-      # registered in Firebase — required for Google Sign-In to work.
-      - name: Restore debug keystore
+      - name: Restore release keystore
         env:
-          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
         run: |
-          mkdir -p ~/.android
-          echo "$DEBUG_KEYSTORE_BASE64" | base64 --decode > ~/.android/debug.keystore
-          # Verify the restored keystore SHA-1 matches what's registered in Firebase
-          keytool -list -v \
-            -keystore ~/.android/debug.keystore \
-            -alias androiddebugkey \
-            -storepass android \
-            -keypass android 2>/dev/null | grep "SHA1:"
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > mobile/android/release.jks
 
       - name: Build release APK
         working-directory: mobile

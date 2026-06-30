@@ -23,6 +23,11 @@ const String _backendBaseUrl = String.fromEnvironment(
   defaultValue: 'http://10.0.2.2:8080',
 );
 
+// google_sign_in 6.x singleton
+final _googleSignIn = GoogleSignIn(
+  serverClientId: '1081327470327-dnaj2s6l1s6eeej1tg0p8moedigvirtu.apps.googleusercontent.com',
+);
+
 /// Full Google OAuth authentication screen.
 ///
 /// Manages loading state and error messages while coordinating the
@@ -39,57 +44,51 @@ class _AuthScreenState extends State<AuthScreen> {
   String? _errorMessage;
   String _debugStep = ''; // temporary debug indicator
 
-  /// Executes the full sign-in flow:
-  ///   Google OAuth → ID token → POST /auth/login → role-based navigation.
   Future<void> _signIn() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _debugStep = '';
     });
 
     try {
       setState(() => _debugStep = 'step1: authenticating...');
-      // Step 1: Trigger the Google account picker.
-      late final GoogleSignInAccount account;
-      try {
-        account = await GoogleSignIn.instance.authenticate();
-      } on GoogleSignInException catch (e) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _debugStep = '';
-            _errorMessage = 'GoogleSignIn error: code=${e.code}';
-          });
-        }
+
+      // google_sign_in 6.x API
+      final GoogleSignInAccount? account = await _googleSignIn.signIn();
+      if (account == null) {
+        // User cancelled
+        if (mounted) setState(() { _isLoading = false; _debugStep = ''; });
         return;
       }
 
-      if (mounted) setState(() => _debugStep = 'step2: extracting idToken...');
-      final String? idToken = account.authentication.idToken;
+      setState(() => _debugStep = 'step2: extracting idToken...');
+      final GoogleSignInAuthentication auth = await account.authentication;
+      final String? idToken = auth.idToken;
 
       if (idToken == null) {
         if (mounted) setState(() { _errorMessage = 'Sign-in failed: idToken was null.'; _debugStep = ''; });
         return;
       }
 
-      if (mounted) setState(() => _debugStep = 'step3: signing into Firebase...');
+      setState(() => _debugStep = 'step3: signing into Firebase...');
       final googleCredential = GoogleAuthProvider.credential(idToken: idToken);
       final userCredential = await FirebaseAuth.instance.signInWithCredential(googleCredential);
 
-      if (mounted) setState(() => _debugStep = 'step4: getting Firebase token...');
+      setState(() => _debugStep = 'step4: getting Firebase token...');
       final String? firebaseIdToken = await userCredential.user?.getIdToken();
       if (firebaseIdToken == null) {
         if (mounted) setState(() { _errorMessage = 'Sign-in failed: firebaseIdToken was null.'; _debugStep = ''; });
         return;
       }
 
-      if (mounted) setState(() => _debugStep = 'step5: calling backend $_backendBaseUrl ...');
+      setState(() => _debugStep = 'step5: calling backend...');
       final http.Response response = await http.post(
         Uri.parse('$_backendBaseUrl/auth/login'),
         headers: {'Authorization': 'Bearer $firebaseIdToken'},
       );
 
-      if (mounted) setState(() => _debugStep = 'step6: got ${response.statusCode}');
+      setState(() => _debugStep = 'step6: got ${response.statusCode}');
 
       if (!mounted) return;
 
@@ -109,18 +108,14 @@ class _AuthScreenState extends State<AuthScreen> {
         });
       }
     } catch (e) {
-      // Network error or any unexpected exception.
       if (mounted) {
         setState(() {
+          _debugStep = '';
           _errorMessage = 'Sign-in failed: ${e.runtimeType}: $e';
         });
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

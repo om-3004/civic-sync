@@ -19,7 +19,7 @@ dependencies:
   firebase_auth: 6.5.4        # Auth state management with Firebase Auth
   cloud_firestore: 6.6.0      # Snapshot listeners for real-time feed (Req 7.1)
   firebase_storage: 13.4.3    # Image upload for ticket evidence (Req 2.6)
-  google_sign_in: 7.2.0       # Google OAuth sign-in flow (Req 1.1)
+  google_sign_in: 6.2.2       # Google OAuth sign-in flow (Req 1.1)
 
   # ── Camera & Location ────────────────────────────────────────────────────
   # camera-only; gallery access is disabled at the widget level (Req 2.1, 2.3)
